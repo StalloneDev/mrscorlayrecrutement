@@ -1,0 +1,556 @@
+Cahier des charges fonctionnel et technique
+Plateforme de recrutement et d'évaluation en ligne — MRS & CORLAY
+Version 1.0 — Octobre 2026 — Document de référence à valider par la Direction
+
+Fiche d'identification du document
+Rubrique	Contenu
+Intitulé du projet	Plateforme de recrutement et d'évaluation en ligne
+Bénéficiaires	Sociétés MRS et CORLAY
+Maître d'ouvrage	Direction (à nommer : nom, fonction)
+Utilisateurs principaux	Ressources humaines, administrateur général, candidats
+Nature de la solution	Application web responsive, hébergée sur Internet
+Version	1.0 — Document de travail soumis à validation
+Statut	Brouillon à valider
+Date	Octobre 2026
+Historique des versions
+Version	Date	Auteur	Objet de la modification
+0.1	Octobre 2026	Direction	Expression initiale du besoin
+1.0	Octobre 2026	Direction	Rédaction du cahier des charges complet
+Validation
+Rôle	Nom	Date	Signature
+Direction MRS			
+Direction CORLAY			
+Responsable RH			
+Chef de projet / prestataire			
+
+Sommaire
+1.	Présentation du projet
+2.	Objectifs
+3.	Périmètre
+4.	Acteurs et droits d'accès
+5.	Exigences fonctionnelles
+6.	Parcours du candidat
+7.	Espace RH : campagnes, épreuves et invitations
+8.	Correction, notation et présélection
+9.	Règles de gestion
+10.	Exigences techniques et architecture
+11.	Modèle de données
+12.	Sécurité et protection des données
+13.	Interfaces et ergonomie
+14.	Rapports et indicateurs
+15.	Recette et critères d'acceptation
+16.	Déploiement, maintenance et sauvegarde
+17.	Livrables
+18.	Planning et phasage
+19.	Risques et mesures de maîtrise
+20.	Points à valider avant le développement
+Annexes : A. Glossaire — B. Messages types — C. Exemple de barème et de classement
+
+1. Présentation du projet
+1.1 Contexte
+Le recrutement de collaborateurs suppose de recevoir les candidatures, de présélectionner les profils, d'organiser des tests, d'évaluer les compétences et de retenir les candidats qui poursuivront le processus. Lorsque ces opérations sont réalisées manuellement (e-mails, fichiers Excel, copies papier), elles entraînent une dispersion des informations, une lourde charge administrative, un suivi difficile et des délais de comparaison importants.
+MRS et CORLAY souhaitent donc se doter d'une plateforme centralisée permettant à la fonction Ressources humaines d'organiser des épreuves de recrutement à distance et de suivre chaque candidat tout au long de l'évaluation.
+1.2 Description du besoin
+La plateforme devra permettre à la RH de :
+•	créer des campagnes de recrutement pour MRS ou CORLAY ;
+•	préparer les questions et configurer la durée de l'épreuve ;
+•	envoyer à chaque candidat présélectionné un lien personnel d'accès ;
+•	suivre en temps réel l'avancement des candidats ;
+•	consulter les réponses, les corriger et attribuer des notes ;
+•	obtenir automatiquement un classement et une liste de candidats présélectionnés pour la suite du processus.
+Les candidats devront pouvoir passer leur épreuve depuis un ordinateur, une tablette ou un téléphone, sans installer de logiciel.
+1.3 Définitions
+Les termes techniques sont définis en annexe A (glossaire).
+
+2. Objectifs
+2.1 Objectif général
+Mettre en place une application web sécurisée qui digitalise et centralise le processus de test et de présélection des candidats pour MRS et CORLAY.
+2.2 Objectifs spécifiques
+•	OBJ-01 Réduire le temps consacré à l'organisation administrative des tests.
+•	OBJ-02 Faciliter l'envoi des invitations aux candidats présélectionnés.
+•	OBJ-03 Standardiser les épreuves selon le poste et les compétences recherchées.
+•	OBJ-04 Garantir un chronométrage fiable et une soumission automatique à l'expiration du temps.
+•	OBJ-05 Garantir la sauvegarde des réponses pendant toute la durée de l'épreuve.
+•	OBJ-06 Permettre à la RH de corriger manuellement et de noter les réponses.
+•	OBJ-07 Produire un classement transparent : Top 5 de chaque campagne et liste des candidats ayant atteint le seuil de réussite.
+•	OBJ-08 Conserver un historique des opérations pour assurer la traçabilité.
+•	OBJ-09 Protéger la confidentialité des données des candidats et isoler les données de MRS et de CORLAY.
+2.3 Résultats attendus
+À la mise en service, la Direction dispose d'un outil permettant de gérer un recrutement de la création de la campagne jusqu'à la présélection, avec des données centralisées, un suivi des statuts en temps réel et des résultats exportables.
+2.4 Indicateurs de réussite du projet
+Indicateur	Cible indicative
+Taux de réponses sauvegardées sans perte	100 % des réponses confirmées par le serveur
+Temps de préparation d'une campagne par la RH	Réduction à valider avec la RH
+Taux d'utilisation de la plateforme pour les recrutements	À définir par la Direction
+Délai entre la clôture des tests et la publication du classement	Réduction à valider avec la RH
+
+3. Périmètre
+3.1 Fonctionnalités incluses (version 1)
+1.	Administration générale et gestion des comptes.
+2.	Gestion des sociétés MRS et CORLAY avec isolation des données.
+3.	Création, publication et clôture des campagnes.
+4.	Banque de questions et construction des épreuves.
+5.	Gestion des candidats (saisie manuelle et import Excel/CSV).
+6.	Invitations individuelles et envoi groupé.
+7.	Authentification du candidat par lien personnel et vérification d'identité.
+8.	Passage du test avec chronomètre serveur.
+9.	Sauvegarde progressive des réponses.
+10.	Soumission volontaire et soumission automatique.
+11.	Correction manuelle, notation et validation.
+12.	Classement : Top 5 et seuil de réussite.
+13.	Rapports et exports PDF/Excel.
+14.	Journal d'audit.
+3.2 Fonctionnalités exclues de la version 1
+•	Correction automatique des réponses libres par intelligence artificielle.
+•	Surveillance vidéo ou biométrique des candidats.
+•	Intégration à un logiciel de paie ou de gestion du personnel.
+•	Publication automatique d'offres d'emploi.
+•	Intégration native aux outils de visioconférence.
+•	Gestion des contrats et de l'intégration des nouveaux collaborateurs.
+L'architecture devra toutefois permettre d'ajouter ces évolutions sans refonte complète.
+3.3 Hypothèses et contraintes
+•	L'application est accessible sur Internet, avec un navigateur moderne.
+•	La langue de l'interface est le français ; le multilinguisme est une évolution possible.
+•	La correction est entièrement manuelle (choix de la Direction), y compris pour les QCM.
+•	Les logos et chartes graphiques de MRS et CORLAY sont fournis par la Direction.
+•	La durée de conservation des données doit être fixée selon la réglementation applicable.
+
+4. Acteurs et droits d'accès
+4.1 Profils
+Profil	Responsabilités principales
+Administrateur général	Gère les sociétés, les comptes, les rôles, les paramètres et supervise la plateforme.
+Responsable RH	Gère les campagnes, les candidats, les corrections et les classements de sa ou ses sociétés.
+Candidat	Accède uniquement à son invitation et à sa propre épreuve.
+4.2 Droits de l'administrateur général
+•	Créer, modifier et désactiver les comptes RH.
+•	Affecter chaque compte à MRS, à CORLAY ou aux deux.
+•	Définir les rôles et autorisations.
+•	Consulter le journal d'audit.
+•	Paramétrer les modèles d'e-mails, les logos et les valeurs par défaut.
+•	Superviser l'état de la plateforme et les sauvegardes.
+4.3 Droits du responsable RH
+•	Créer et gérer les campagnes de ses sociétés.
+•	Créer des questions et des épreuves.
+•	Importer, ajouter et inviter des candidats.
+•	Suivre les épreuves en cours et les soumissions.
+•	Corriger, noter et valider.
+•	Générer les classements et rapports.
+•	Organiser les entretiens des candidats présélectionnés.
+4.4 Séparation des données MRS / CORLAY
+L'espace RH est commun, mais les données sont isolées selon les droits. Une RH affectée uniquement à MRS ne peut consulter ni les réponses, ni les notes, ni les dossiers des candidats de CORLAY. Une RH autorisée sur les deux sociétés accède aux deux espaces.
+Cette séparation est imposée côté serveur et dans la base de données, et non simplement obtenue en masquant des menus dans l'interface.
+4.5 Comptes individuels
+Chaque utilisateur RH dispose d'un compte nominatif. Le partage de compte est interdit afin de pouvoir identifier l'auteur de chaque action.
+
+5. Exigences fonctionnelles
+Les exigences sont identifiées par un code (EF-xx) afin de faciliter le suivi et la recette. Priorités : M = indispensable, S = souhaitable.
+5.1 Administration
+Réf.	Exigence	Priorité
+EF-01	Création, modification, désactivation des comptes RH	M
+EF-02	Affectation des comptes à une ou plusieurs sociétés	M
+EF-03	Gestion des rôles et autorisations	M
+EF-04	Réinitialisation sécurisée des accès	M
+EF-05	Gestion des logos et couleurs de chaque société	M
+EF-06	Gestion des modèles de notifications et d'e-mails	M
+EF-07	Paramètres par défaut (durée, seuil, nombre de retenus)	M
+EF-08	Consultation et filtrage du journal d'audit	M
+5.2 Campagnes
+Chaque campagne possède un identifiant unique et comporte au minimum : société, intitulé du poste, référence, description et compétences recherchées, dates d'ouverture et de clôture, durée de l'épreuve, épreuve associée, seuil de réussite, nombre de candidats à présélectionner, responsable RH et statut.
+Réf.	Exigence	Priorité
+EF-10	Créer une campagne rattachée à une société	M
+EF-11	Statuts : brouillon, publiée, en cours, clôturée, archivée	M
+EF-12	Une campagne en brouillon n'est pas accessible aux candidats	M
+EF-13	Dupliquer une campagne avec génération de nouveaux identifiants	S
+EF-14	Clôturer et archiver une campagne	M
+EF-15	Définir le seuil de réussite et le nombre de candidats du Top	M
+5.3 Banque de questions
+Types de questions requis :
+•	QCM à réponse unique ;
+•	QCM à réponses multiples ;
+•	vrai / faux ;
+•	question écrite avec zone de saisie courte ;
+•	question ouverte avec zone de saisie longue ;
+•	question numérique ou à réponse courte.
+Pour chaque question, la RH définit : l'énoncé, le type, les choix éventuels, le barème, le caractère obligatoire ou facultatif, la compétence évaluée, la catégorie (informatique, comptabilité, secrétariat, logistique, commercial, management, etc.), le niveau de difficulté, les consignes particulières et, en option, la réponse attendue visible uniquement par la RH.
+Réf.	Exigence	Priorité
+EF-20	Éditeur de questions simple, sans compétence informatique	M
+EF-21	Zones de saisie avec limite de caractères configurable et compteur visible	M
+EF-22	Catégories, compétences et niveaux de difficulté	M
+EF-23	Bibliothèque de questions réutilisables entre campagnes	M
+EF-24	Réponse attendue masquée aux candidats	M
+EF-25	Ajout d'images ou de documents dans l'énoncé	S
+5.4 Construction de l'épreuve
+La RH sélectionne des questions et définit : titre, consignes générales, ordre, barème, temps total, nombre de questions, mode d'affichage (toutes les questions sur une page ou une par une), autorisation de retour en arrière, mélange éventuel de l'ordre des questions et nombre de tentatives.
+Réf.	Exigence	Priorité
+EF-30	Assembler une épreuve depuis la banque de questions	M
+EF-31	Afficher le total de points maximal avant publication et vérifier sa cohérence	M
+EF-32	Aperçu de l'épreuve tel que le candidat la verra	M
+EF-33	Enregistrer en brouillon, tester, puis publier	M
+EF-34	Interdire toute modification silencieuse d'une épreuve déjà commencée ; toute modification exceptionnelle est tracée	M
+5.5 Gestion des candidats
+Champs : nom, prénom, adresse e-mail, numéro de téléphone, société, poste, campagne, statut de l'invitation, statut de l'épreuve.
+Réf.	Exigence	Priorité
+EF-40	Ajout individuel d'un candidat	M
+EF-41	Import Excel / CSV avec contrôle des erreurs	M
+EF-42	Détection des doublons potentiels avant validation	M
+EF-43	Participation d'un même candidat à plusieurs campagnes sans mélange des données	M
+EF-44	Fiche candidat avec historique complet	M
+5.6 Invitations
+Chaque invitation comporte : nom de la société, poste, instructions de connexion, lien personnel, date limite, durée du test et coordonnées de contact.
+Réf.	Exigence	Priorité
+EF-50	Envoi individuel ou groupé des invitations par e-mail	M
+EF-51	Enregistrement de la date d'envoi et de l'état (envoyée, ouverte, commencée, terminée)	M
+EF-52	Renvoi, révocation et régénération d'un lien	M
+EF-53	Rappels automatiques avant la date limite	S
+
+6. Parcours du candidat
+6.1 Vue d'ensemble
+1.	Réception de l'invitation par e-mail.
+2.	Ouverture du lien personnel.
+3.	Identification (nom, prénom, e-mail, téléphone) et vérification.
+4.	Lecture des consignes.
+5.	Démarrage de l'épreuve.
+6.	Réponses avec sauvegarde progressive.
+7.	Soumission volontaire ou automatique.
+8.	Page de confirmation.
+6.2 Page d'accueil de l'invitation
+Elle présente le logo et le nom de la société, le poste visé, les consignes d'accès et un formulaire d'identification. Les informations saisies sont comparées à celles enregistrées par la RH. Si le lien est invalide, expiré ou révoqué, ou si l'identité ne correspond pas, l'accès est refusé par un message explicite qui ne révèle aucune information confidentielle.
+6.3 Authentification et vérification d'identité
+•	Le lien contient un jeton aléatoire, long et non prévisible, associé à un candidat et à une campagne uniques. Une adresse du type https://recrutement.nomdedomaine.com/invitation/jeton-unique remplace tout lien contenant un nom lisible.
+•	Le numéro de téléphone sert à vérifier l'identité mais ne constitue pas à lui seul un mot de passe, car il n'est pas suffisamment secret.
+•	Un code à usage unique, envoyé par e-mail ou par SMS, est exigé avant l'accès à l'épreuve (recommandé).
+•	Les tentatives répétées sont limitées ; un lien révoqué ne peut plus être utilisé.
+•	Aucune réponse ni donnée sensible ne figure dans l'URL.
+6.4 Page de consignes
+Après vérification, le candidat voit son nom et prénom, la société, le poste, la durée totale, le nombre de questions, la date et l'heure limites, les règles de soumission et les conditions de reprise après interruption. Le chronomètre ne démarre pas sur cette page. Il démarre uniquement lorsque le candidat clique sur « Commencer l'épreuve » et que le serveur confirme le démarrage.
+6.5 Interface pendant l'épreuve
+Zone	Contenu
+En haut à gauche	Nom et prénom du candidat
+En haut à droite	Nom et logo de la société (MRS ou CORLAY)
+Ligne suivante	Poste, temps restant (décompte), date et heure limites de soumission
+Corps	Numéro de la question et progression, énoncé, zone de réponse
+Bas de page	Navigation, indicateur d'enregistrement, bouton « Envoyer ma réponse »
+Le candidat doit pouvoir distinguer les questions répondues, non répondues et en cours de rédaction. L'affichage reste lisible sur petit écran.
+6.6 Sauvegarde progressive
+Les réponses sont enregistrées au fur et à mesure. Un indicateur d'état affiche :
+•	« Enregistrement en cours… »
+•	« Réponses enregistrées »
+•	« Connexion interrompue — tentative de reconnexion »
+En cas de coupure Internet, les réponses déjà confirmées par le serveur sont conservées ; les réponses saisies mais non confirmées sont resynchronisées au retour de la connexion.
+6.7 Soumission volontaire
+Lorsque le candidat clique sur « Envoyer ma réponse », une fenêtre de confirmation lui demande de valider définitivement. Après confirmation : les dernières réponses sont enregistrées, l'épreuve est clôturée, l'heure de soumission est enregistrée, le candidat ne peut plus modifier ses réponses (sauf réouverture exceptionnelle par la RH) et le message de confirmation s'affiche avec la date et l'heure de réception.
+6.8 Soumission automatique
+Le chronomètre est contrôlé par le serveur. À l'expiration du temps :
+•	toute nouvelle saisie est refusée ;
+•	les dernières réponses effectivement enregistrées sont récupérées ;
+•	l'épreuve est clôturée avec la date et l'heure ;
+•	le statut « Soumission automatique » est attribué ;
+•	le message dédié est affiché au candidat.
+Cette soumission doit fonctionner même si le navigateur du candidat est fermé. Elle ne dépend pas uniquement d'un compte à rebours exécuté dans le navigateur.
+6.9 Gestion des interruptions
+Incident	Comportement attendu
+Actualisation de la page	Le temps restant et les réponses sont conservés
+Fermeture du navigateur	L'épreuve reste en cours ; le temps continue de s'écouler selon le serveur
+Perte de connexion	Réponses confirmées conservées ; resynchronisation au retour
+Expiration de session	Reconnexion avec vérification d'identité, sans perte de temps ni de réponses
+Accès depuis un autre appareil	Géré selon la politique définie par la RH (blocage ou reprise tracée)
+Erreur technique à la soumission	Nouvelle tentative contrôlée ; aucune double soumission
+Arrivée de la date limite	Clôture automatique selon la règle définie
+Une interruption ne réinitialise jamais le chronomètre. Toute prolongation exceptionnelle est autorisée par la RH et tracée.
+
+7. Espace RH : campagnes, épreuves et invitations
+Les exigences détaillées de création des campagnes, des questions, des épreuves, des candidats et des invitations figurent aux paragraphes 5.2 à 5.6. Cette section décrit l'organisation du travail de la RH et le suivi des épreuves.
+7.1 Parcours de travail de la RH
+1.	Créer la campagne (société, poste, dates, durée, seuil, nombre de retenus).
+2.	Préparer l'épreuve depuis la banque de questions, la prévisualiser puis la publier.
+3.	Ajouter ou importer les candidats présélectionnés.
+4.	Générer et envoyer les invitations personnelles.
+5.	Suivre en temps réel les invitations, les démarrages et les soumissions.
+6.	Corriger les réponses et attribuer les notes.
+7.	Valider les corrections, consulter le classement et exporter le rapport de présélection.
+8.	Convoquer les candidats retenus pour la suite du processus.
+7.2 Tableau de bord RH
+Dès sa connexion, la RH accède à une vue d'ensemble de ses sociétés : campagnes actives, candidats invités, tests commencés, tests terminés, tests à corriger et candidats ayant atteint le seuil.
+Menu latéral minimal :
+•	Tableau de bord
+•	Campagnes de recrutement
+•	Banque de questions et épreuves
+•	Candidats et invitations
+•	Suivi des tests en cours
+•	Correction et notation
+•	Classement et présélection
+•	Entretiens
+•	Rapports et statistiques
+•	Paramètres (administrateur)
+7.3 Suivi des tests en cours
+Réf.	Exigence	Priorité
+EF-60	Liste des candidats d'une campagne avec statut, heure de début, temps restant et type de soumission	M
+EF-61	Filtres par société, campagne, poste et statut	M
+EF-62	Prolongation exceptionnelle du temps d'un candidat, avec motif obligatoire et traçabilité	M
+EF-63	Réouverture exceptionnelle d'une épreuve soumise, avec motif obligatoire et traçabilité	M
+EF-64	Alerte sur les invitations non ouvertes à l'approche de la date limite	S
+7.4 Statuts du candidat
+Statut	Signification
+Invité	Invitation envoyée
+Test commencé	Le candidat a démarré l'épreuve
+Soumis	Réponses reçues (soumission volontaire)
+Soumis automatiquement	Réponses clôturées à l'expiration du temps
+À corriger	Correction manuelle nécessaire
+Corrigé / Validé	Correction terminée / confirmée par la RH
+Présélectionné	Retenu pour la prochaine étape
+Entretien planifié	Date d'entretien définie
+Non retenu / Clôturé	Processus terminé pour ce candidat
+
+8. Correction, notation et présélection
+8.1 Espace de correction
+La RH ouvre la fiche d'un candidat ayant terminé son test et consulte : ses informations, la campagne et l'épreuve, les dates et heures de début et de soumission, le type de soumission (volontaire ou automatique), les questions, les réponses, le barème, les réponses attendues et les champs de notation.
+8.2 Notation manuelle
+La correction est entièrement manuelle dans la version 1, y compris pour les QCM.
+Réf.	Exigence	Priorité
+EF-70	Attribution d'une note par question au moyen d'une liste déroulante	M
+EF-71	L'échelle de la liste suit le barème de la question (par exemple de 0 à 10) ; la note 0 est toujours disponible	M
+EF-72	Interdiction des notes négatives ou supérieures au maximum de la question	M
+EF-73	Commentaire du correcteur par question (facultatif ou obligatoire selon paramétrage)	M
+EF-74	Enregistrement d'une correction partielle et reprise ultérieure	M
+EF-75	Calcul automatique du total, du pourcentage et de la note sur 20 ou sur 100	M
+Une question facultative non répondue est traitée selon le barème configuré.
+8.3 Validation de la correction
+Statuts : non corrigé, en cours de correction, corrigé en attente de validation, correction validée. Le classement officiel n'est calculé qu'à partir des notes validées. Toute modification d'une note validée enregistre l'auteur, la date, l'ancienne valeur, la nouvelle valeur et le motif, puis déclenche le recalcul du classement.
+8.4 Résultats affichés
+Total obtenu, total maximal, pourcentage de réussite, seuil requis, statut de réussite et rang dans la campagne. Si des coefficients sont utilisés, les pondérations sont affichées clairement.
+8.5 Classement et présélection
+Le système propose deux vues calculées séparément :
+•	Vue A — Top 5 : les cinq meilleurs candidats parmi les résultats validés de la campagne. Le nombre peut être modifié par la RH (3, 5, 10 ou valeur personnalisée).
+•	Vue B — Candidats admissibles : tous les candidats dont la note atteint ou dépasse le seuil de la campagne.
+Réf.	Exigence	Priorité
+EF-80	Calcul automatique des deux vues après validation des corrections	M
+EF-81	Un candidat présent dans les deux vues n'est compté qu'une fois dans les statistiques	M
+EF-82	Règle de départage des ex æquo définie avant l'épreuve (par exemple note sur la compétence principale, puis temps utilisé)	M
+EF-83	Aucun candidat dont la correction est incomplète ou non validée ne figure dans le classement officiel	M
+EF-84	Un candidat du Top 5 n'ayant pas atteint le seuil n'est pas retenu automatiquement, sauf règle explicite de la RH	M
+EF-85	Marquage d'un candidat « À revoir » avec justification	S
+EF-86	Traçabilité des modifications manuelles du classement	M
+EF-87	Comparaison des notes par compétence	S
+La note est un outil d'aide à la décision : elle ne déclenche jamais automatiquement une décision définitive d'embauche.
+8.6 Statuts de présélection
+En attente de correction, en cours de correction, résultat disponible, admissible selon le seuil, classé dans le Top 5, présélectionné pour entretien, en attente de décision, non retenu, entretien planifié, processus terminé. Le statut est confirmé par la RH.
+8.7 Gestion des entretiens (version 1 si le budget le permet, sinon version 2)
+Pour chaque candidat présélectionné : date, heure, lieu ou lien de visioconférence, intervenants, statut de la convocation (planifié, réalisé, reporté, annulé), résultat, commentaires et décision finale. Envoi de la convocation par e-mail.
+
+9. Règles de gestion
+Réf.	Règle
+RG-01	Chaque campagne est rattachée à une société déterminée.
+RG-02	Chaque invitation est liée à un candidat et à une campagne.
+RG-03	Un candidat ne peut accéder qu'à sa propre épreuve.
+RG-04	Le chronomètre démarre après confirmation du démarrage par le serveur.
+RG-05	L'actualisation de la page ne réinitialise jamais le temps.
+RG-06	Les réponses sont sauvegardées progressivement.
+RG-07	La soumission volontaire exige une confirmation du candidat.
+RG-08	L'expiration du temps entraîne la clôture et la soumission automatiques.
+RG-09	Une épreuve soumise ne peut plus être modifiée par le candidat.
+RG-10	Les notes sont limitées au barème de chaque question.
+RG-11	Seules les corrections validées entrent dans le classement officiel.
+RG-12	Le Top 5 et le seuil de réussite sont calculés séparément.
+RG-13	Les droits d'accès sont contrôlés côté serveur.
+RG-14	Les modifications de notes et de paramètres sensibles sont journalisées.
+RG-15	Les données de chaque société sont isolées selon les habilitations.
+RG-16	Les données personnelles sont conservées selon une politique définie.
+RG-17	Toute réouverture ou prolongation exceptionnelle est autorisée, motivée et tracée.
+RG-18	Les dates, heures et durées sont horodatées côté serveur.
+RG-19	Une épreuve publiée et commencée ne peut pas être modifiée sans traçabilité.
+RG-20	Un candidat ne passe l'épreuve qu'une seule fois, sauf autorisation explicite de la RH.
+
+10. Exigences techniques et architecture
+10.1 Type d'application
+Application web responsive accessible depuis un navigateur moderne, comprenant une interface RH, une interface candidat, un serveur applicatif avec API sécurisée, une base de données relationnelle, un service d'envoi d'e-mails, un système de sauvegarde et un mécanisme de journalisation.
+10.2 Architecture logique
+Couche	Rôle
+Présentation	Interface RH et interface candidat
+API et serveur applicatif	Authentification, autorisations, chronométrage, réponses, correction, classement
+Base de données	Sociétés, utilisateurs, campagnes, questions, réponses, notes, historique
+Services d'exploitation	Hébergement, e-mails, sauvegardes, supervision, restauration
+Le serveur est la référence pour le temps, la clôture des épreuves, les calculs et les autorisations. Le navigateur ne peut ni prolonger le temps ni modifier les résultats en manipulant le code de la page.
+10.3 Chronométrage côté serveur
+•	À chaque démarrage, le serveur enregistre l'heure de début et calcule l'heure limite.
+•	Le navigateur affiche un compte à rebours calé sur l'heure du serveur, qui se resynchronise régulièrement.
+•	Une tâche planifiée côté serveur clôture automatiquement toute épreuve dont l'heure limite est dépassée, même si le navigateur est fermé.
+•	Les opérations de soumission sont idempotentes : des requêtes répétées ne créent jamais de doublon.
+•	Les réponses reçues après l'heure limite sont refusées, sous réserve d'une tolérance technique réseau courte, définie et documentée.
+10.4 Technologies envisageables
+Le choix final dépend des compétences disponibles, du budget, de la maintenance et de l'hébergement. Ces propositions ne sont pas contraignantes.
+Composant	Orientation proposée
+Interface	Next.js ou Angular
+Serveur et API	Node.js / TypeScript
+Base de données	PostgreSQL
+Hébergement	Cloud, avec environnements de test et de production distincts
+E-mails	SMTP ou fournisseur transactionnel
+Fichiers	Stockage sécurisé pour d'éventuelles pièces jointes
+Sauvegarde	Sauvegardes automatiques et copie séparée
+Supervision	Journaux, alertes et suivi de disponibilité
+10.5 Performance et compatibilité
+•	Écrans principaux chargés en trois secondes environ dans des conditions normales de connexion.
+•	Enregistrement des réponses sans blocage prolongé de l'interface.
+•	Nombre de candidats simultanés à fixer avant la mise en production, pour dimensionner l'hébergement (valeur à définir, par exemple 100 candidats simultanés).
+•	Compatibilité avec les versions récentes de Chrome, Edge, Firefox et Safari, sur ordinateur, tablette et téléphone.
+•	Disponibilité cible à définir, notamment pendant les périodes de tests.
+
+11. Modèle de données
+Entité	Rôle
+companies	Sociétés MRS et CORLAY (nom, logo, couleurs)
+users	Comptes administrateurs et RH
+roles	Profils et permissions
+user_company_access	Autorisations des utilisateurs par société
+campaigns	Campagnes de recrutement
+candidates	Identité et coordonnées des candidats
+invitations	Jetons, liens personnels, état et expiration
+tests	Épreuves configurées
+questions	Banque de questions
+test_questions	Questions associées à une épreuve, ordre et barème
+test_attempts	Tentatives, heure de début, heure limite, type de soumission
+answers	Réponses enregistrées
+grades	Notes, commentaires, correcteur, statut de validation
+interviews	Convocations et suivi des entretiens
+notifications	Historique des e-mails et notifications
+audit_logs	Journal des actions sensibles
+Chaque enregistrement pertinent est rattaché à une société ou à une campagne. Les contraintes d'intégrité empêchent les associations incohérentes entre candidats, campagnes et épreuves. Le jeton d'invitation n'est jamais stocké en clair (empreinte uniquement).
+
+12. Sécurité et protection des données
+12.1 Sécurité des accès
+•	HTTPS obligatoire sur l'ensemble de la plateforme.
+•	Mots de passe robustes et authentification renforcée (double facteur) pour les comptes à privilèges.
+•	Sessions non prévisibles, avec expiration et déconnexion.
+•	Limitation des tentatives de connexion et de vérification.
+•	Liens d'invitation uniques, aléatoires, révocables et à expiration contrôlée.
+•	Contrôle des autorisations côté serveur pour chaque requête.
+•	Protection contre les injections, les accès non autorisés et les attaques courantes du web (bonnes pratiques OWASP).
+12.2 Confidentialité
+La plateforme interdit : la consultation des réponses d'un autre candidat, l'accès des candidats aux corrigés, l'accès d'une RH aux données d'une société non autorisée, la modification directe des notes sans autorisation et la présence de données sensibles dans les journaux techniques. Les exports respectent les droits de l'utilisateur qui les génère.
+12.3 Protection des données personnelles
+Les informations collectées sont limitées à ce qui est nécessaire à l'évaluation professionnelle. Les candidats sont informés des finalités, des destinataires, de la durée de conservation et de leurs droits (accès, rectification, suppression). La durée de conservation et les obligations légales sont à valider selon le pays d'établissement de MRS et de CORLAY. Les dossiers arrivés à échéance sont supprimés ou anonymisés.
+12.4 Journal d'audit
+Sont journalisés : connexions RH, création et modification de campagnes et d'épreuves, envoi et révocation d'invitations, démarrage et soumission des épreuves, prolongations et réouvertures, corrections et validations, modifications du classement, exports et changements de droits.
+12.5 Sauvegarde et restauration
+Sauvegardes automatiques de la base de données, copie séparée, protection des sauvegardes, procédure de restauration documentée, tests réguliers de restauration et plan de reprise après incident. La perte de données maximale acceptable et le délai de reprise sont à fixer avant le lancement.
+
+13. Interfaces et ergonomie
+13.1 Interface RH
+Menu latéral, tableau de bord, tableaux filtrables et triables, formulaires avec validation, indicateurs de statut, fiches détaillées, recherche, exports et confirmation avant toute opération irréversible.
+13.2 Interface candidat
+Identité visuelle de la société concernée, chronomètre toujours visible, zones de saisie adaptées aux réponses longues, indicateur d'enregistrement, messages clairs et navigation qui évite toute perte de réponse. Affichage lisible sur petit écran.
+13.3 Identité visuelle et accessibilité
+Logos, couleurs et textes de MRS et de CORLAY paramétrables par l'administrateur sans modification du code. Contrastes suffisants, tailles de texte lisibles et navigation au clavier sur les écrans principaux.
+
+14. Rapports et indicateurs
+Rapport	Contenu
+Rapport de campagne	Candidats invités, ayant commencé, ayant soumis, en attente, corrigés, ayant atteint le seuil, Top 5
+Rapport individuel	Identité, épreuve, réponses, notes par question, note totale, commentaires, statut
+Rapport de présélection	Classement, admissibles, Top 5, ex æquo, statut des entretiens
+Statistiques	Taux de participation, notes moyennes, durée moyenne d'épreuve, résultats par compétence
+Exports en PDF et, lorsque c'est pertinent, en Excel, réservés aux utilisateurs autorisés.
+
+15. Recette et critères d'acceptation
+15.1 Scénarios de recette
+Test	Résultat attendu
+Création d'une campagne	La campagne est créée avec ses paramètres et son statut
+Invitation d'un candidat	Un lien unique est généré et envoyé
+Vérification d'identité	Un candidat non autorisé ne peut pas accéder à l'épreuve
+Démarrage du test	Le chronomètre démarre à l'heure enregistrée par le serveur
+Actualisation de la page	Le temps et les réponses sont conservés
+Perte de connexion	Les réponses confirmées sont conservées et resynchronisées
+Soumission volontaire	Le test est clôturé après confirmation
+Expiration du temps (navigateur fermé)	Le serveur clôture et soumet automatiquement
+Correction manuelle	Les notes respectent le barème
+Validation des corrections	Seules les notes validées alimentent le classement officiel
+Calcul du Top 5 et du seuil	Les deux listes sont correctes, avec gestion des ex æquo
+Séparation des sociétés	Une RH ne peut pas accéder aux données hors de son périmètre
+Export	Le document contient les résultats autorisés
+Restauration	Les données sont restaurées selon la procédure
+15.2 Types de tests et conditions de validation
+Tests fonctionnels, tests de sécurité, tests de charge, tests de compatibilité navigateurs et appareils, tests de reprise après interruption. La mise en production est autorisée uniquement après correction des anomalies bloquantes et signature du procès-verbal de recette par les responsables désignés.
+
+16. Déploiement, maintenance et sauvegarde
+16.1 Environnements
+Développement, préproduction (recette avec données de test) et production. Aucune donnée réelle de candidat n'est copiée dans les environnements de développement sans précaution.
+16.2 Mise en production
+Configuration de l'hébergement, du nom de domaine et du HTTPS, déploiement de l'application et de la base, configuration des e-mails, création des comptes administratifs, vérification des sauvegardes, recette finale, formation de la RH et mise en service officielle.
+16.3 Maintenance
+Mises à jour de sécurité, correction des anomalies, surveillance des performances, vérification des sauvegardes, restauration en cas d'incident, assistance aux utilisateurs, documentation des changements et gestion des évolutions. Les délais d'intervention et responsabilités sont fixés dans le contrat de réalisation ou de service.
+
+17. Livrables
+1.	Cahier des charges validé.
+2.	Maquettes des écrans RH et candidat.
+3.	Modèle de données et schéma de base de données.
+4.	Application web fonctionnelle, API et mécanismes de sécurité.
+5.	Scripts de déploiement et de configuration.
+6.	Documentation d'administration et de maintenance.
+7.	Guide d'utilisation RH et guide de passage du test pour les candidats.
+8.	Plan de sauvegarde et procédure de restauration.
+9.	Rapport de tests et procès-verbal de recette.
+10.	Code source et accès d'administration remis à l'entité désignée par la Direction, selon les modalités contractuelles.
+
+18. Planning et phasage
+Phase	Contenu	Durée
+1. Cadrage et conception	Validation du cahier des charges, maquettes, rôles, règles de notation, architecture	À estimer
+2. Développement du socle	Administration, sociétés, campagnes, banque de questions, invitations, espace candidat	À estimer
+3. Tests et notation	Chronométrage, sauvegarde, soumission automatique, correction, classement	À estimer
+4. Sécurité et recette	Tests fonctionnels et de sécurité, contrôle des accès, sauvegarde et restauration	À estimer
+5. Déploiement et formation	Mise en production, formation RH, documentation, accompagnement	À estimer
+Évolutions envisagées ensuite : version 2 (import Excel enrichi, rappels automatiques, rapports PDF avancés, statistiques, entretiens) et version 3 (analyse des compétences, assistance IA à la correction, banque de questions aléatoires, tableaux de bord Direction). Le calendrier et le budget seront estimés après validation du périmètre, du volume de candidats, de l'hébergement et de la disponibilité attendue.
+
+19. Risques et mesures de maîtrise
+Risque	Mesure
+Perte de réponses pendant l'épreuve	Sauvegarde progressive confirmée par le serveur, resynchronisation
+Contestation du temps de l'épreuve	Chronométrage serveur, horodatage et journal d'audit
+Usurpation d'identité du candidat	Lien unique, vérification d'identité, code à usage unique
+Accès aux données d'une autre société	Isolation côté serveur et base de données, tests dédiés
+Surcharge lors de tests simultanés	Dimensionnement, tests de charge
+Non-conformité en matière de données personnelles	Information des candidats, durée de conservation, accès limités
+Erreur de notation	Bornes de notes, validation, historique des modifications
+Dépassement du périmètre	Phasage, version 1 limitée aux fonctions essentielles
+
+20. Points à valider avant le développement
+Point	Proposition initiale
+Durée par défaut de l'épreuve	Configurable par campagne
+Seuil de réussite	Configurable, par exemple 60/100
+Nombre de candidats du Top	Cinq par campagne, modifiable
+Règle en cas d'ex æquo	Règle prédéfinie, puis validation RH
+Nombre de tentatives	Une, avec réouverture exceptionnelle tracée
+Vérification du candidat	Lien individuel et code à usage unique (e-mail ou SMS)
+Reprise depuis un autre appareil	À décider : blocage ou reprise tracée
+Correction	Manuelle par la RH
+Hébergement	Cloud accessible sur Internet
+Gestion des sociétés	Espace RH commun avec séparation des données
+Exports	PDF et Excel
+Durée de conservation des dossiers	À valider selon la réglementation applicable
+Nombre de candidats simultanés	À déterminer pour dimensionner l'hébergement
+Charte graphique	Logos et couleurs de MRS et CORLAY à fournir
+Entretiens dans la version 1	À décider selon le budget
+
+Annexe A — Glossaire
+Terme	Définition
+Campagne	Opération de recrutement pour un poste et une société
+Épreuve	Ensemble de questions soumis aux candidats
+Jeton	Code aléatoire contenu dans le lien personnel du candidat
+Code à usage unique	Code temporaire envoyé par e-mail ou SMS pour vérifier l'identité
+Soumission automatique	Clôture de l'épreuve par le serveur à l'expiration du temps
+Top 5	Les cinq meilleurs candidats validés d'une campagne
+Seuil de réussite	Note minimale pour être déclaré admissible
+Journal d'audit	Historique horodaté des actions sensibles
+Ex æquo	Candidats ayant la même note
+Annexe B — Messages types
+Invitation (e-mail) : Bonjour [prénom], dans le cadre du recrutement pour le poste de [poste] au sein de [MRS/CORLAY], vous êtes invité(e) à passer une épreuve en ligne d'une durée de [durée] avant le [date limite]. Utilisez votre lien personnel : [lien]. Ne le partagez pas. Pour toute difficulté, contactez [contact].
+Soumission volontaire : Votre réponse a bien été envoyée et enregistrée le [date] à [heure]. Merci pour votre participation. Nous vous invitons à rester attentif à vos e-mails et à votre téléphone pour la suite du processus de recrutement.
+Soumission automatique : Le temps imparti est écoulé. Vos réponses enregistrées ont été soumises automatiquement le [date] à [heure]. Merci pour votre participation. Nous vous invitons à rester à l'écoute des prochaines communications de notre équipe RH.
+Confirmation avant envoi : Voulez-vous envoyer définitivement vos réponses ? Vous ne pourrez plus les modifier.
+Accès refusé : Ce lien n'est pas valide ou a expiré. Veuillez contacter l'équipe RH.
+Annexe C — Exemple de barème et de classement (données fictives)
+Épreuve « Assistant comptable » : 20 questions, 100 points, seuil de réussite 60/100.
+Rang	Candidat	Note	Statut
+1	Candidat A	92/100	Top 5 et admissible
+2	Candidat B	88/100	Top 5 et admissible
+3	Candidat C	85/100	Top 5 et admissible
+4	Candidat D	81/100	Top 5 et admissible
+5	Candidat E	79/100	Top 5 et admissible
+6	Candidat F	64/100	Admissible (hors Top 5)
+7	Candidat G	55/100	Non admissible
+

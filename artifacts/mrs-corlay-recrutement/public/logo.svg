@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="180" height="48" viewBox="0 0 180 48">
-  <rect width="46" height="46" rx="11" fill="#1d725e"/>
-  <path d="M10 31V15h4l5 8 5-8h4v16h-4V22l-5 7-5-7v9h-4zm20-15 7 14" fill="none" stroke="#f9f6ee" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-  <text x="56" y="22" fill="#263448" font-family="Manrope, sans-serif" font-size="14" font-weight="800" letter-spacing="1">MRS &amp; CORLAY</text>
-  <text x="57" y="36" fill="#74808b" font-family="monospace" font-size="7.5" letter-spacing="1.15">RECRUTEMENT &amp; ÉVALUATION</text>
-</svg>

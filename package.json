@@ -1,19 +1,50 @@
 {
-  "name": "workspace",
-  "version": "0.0.0",
+  "name": "mrs-corlay-recrutement",
+  "version": "1.0.0",
   "license": "MIT",
   "scripts": {
-    "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
-    "build": "pnpm run typecheck && pnpm -r --if-present run build",
-    "typecheck:libs": "tsc --build",
-    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "db:push": "drizzle-kit push --config drizzle.config.ts",
+    "db:seed": "node scripts/seed.mjs"
   },
   "private": true,
   "dependencies": {
-    "@replit/connectors-sdk": "^0.4.3"
+    "@replit/connectors-sdk": "^0.4.3",
+    "bcryptjs": "^3.0.3",
+    "clsx": "^2.1.1",
+    "dotenv": "^18.0.7",
+    "drizzle-orm": "^0.39.3",
+    "drizzle-zod": "^0.8.3",
+    "jose": "^6.2.12",
+    "lucide-react": "^1.16.0",
+    "next": "^16.4.0",
+    "nodemailer": "^10.0.16",
+    "pg": "^8.13.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tailwind-merge": "^3.0.2",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.12",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^22.13.9",
+    "@types/nodemailer": "^8.0.2",
+    "@types/pg": "^8.11.11",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "drizzle-kit": "^0.30.5",
+    "postcss": "^8.5.3",
     "prettier": "^3.9.6",
-    "typescript": "~5.9.3"
+    "tailwindcss": "^4.0.12",
+    "typescript": "^5.7.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@clerk/shared",
+      "esbuild"
+    ]
   }
 }

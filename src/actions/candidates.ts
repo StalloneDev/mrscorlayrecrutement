@@ -5,7 +5,7 @@ import { eq, and, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { generateInvitationToken, hashInvitationToken } from "@/lib/security";
 import { logAuditEvent } from "@/lib/audit";
-import { sendInvitationEmail } from "@/lib/email";
+import { sendInvitationEmail, getAppUrl } from "@/lib/email";
 
 export async function getCandidatesByCampaign(campaignId: string) {
   const candidates = await db
@@ -102,7 +102,7 @@ export async function addCandidateAction(formData: FormData) {
 
 export async function generateInvitationsAction(campaignId: string, candidateIds: string[]) {
   const generated: { candidateName: string; email: string; url: string; token: string; emailSent?: boolean }[] = [];
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const appUrl = getAppUrl();
 
   const [campaign] = await db
     .select({ title: campaignsTable.title })
@@ -340,7 +340,7 @@ export async function resendInvitationAction(candidateId: string, campaignId: st
     .where(eq(campaignsTable.id, campaignId))
     .limit(1);
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const appUrl = getAppUrl();
   const invitationUrl = `${appUrl}/invitation/${rawToken}`;
   const candidateName = `${candidate.firstName} ${candidate.lastName}`;
 

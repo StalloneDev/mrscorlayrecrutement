@@ -1,4 +1,34 @@
 import nodemailer from "nodemailer";
+import path from "path";
+import fs from "fs";
+
+export function getAppUrl(): string {
+  const url = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  if (url && !url.includes("localhost") && !url.includes("127.0.0.1")) {
+    return url.replace(/\/$/, "");
+  }
+  return "https://mrscorlayrecrutement.vercel.app";
+}
+
+function getLogoConfig() {
+  const logoPath = path.join(process.cwd(), "public", "logo-mrs.png");
+  if (fs.existsSync(logoPath)) {
+    return {
+      src: "cid:logo-mrs",
+      attachments: [
+        {
+          filename: "logo-mrs.png",
+          path: logoPath,
+          cid: "logo-mrs",
+        },
+      ],
+    };
+  }
+  return {
+    src: `${getAppUrl()}/logo-mrs.png`,
+    attachments: [],
+  };
+}
 
 export interface SendInvitationEmailParams {
   to: string;
@@ -19,8 +49,7 @@ export async function sendInvitationEmail({
   const port = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 587;
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
-  // Pour Office 365 / Exchange, l'adresse de l'expéditeur doit correspondre exactement au compte authentifié
-  // et le nom d'affichage doit être propre sans guillemets échappés malformés.
+
   let senderName = "MRS & CORLAY Recrutement";
   if (process.env.SMTP_FROM) {
     const cleaned = process.env.SMTP_FROM.replace(/\\"/g, '"').replace(/^"/, '').replace(/"$/, '');
@@ -54,6 +83,8 @@ export async function sendInvitationEmail({
     },
   });
 
+  const { src: logoSrc, attachments } = getLogoConfig();
+
   const html = `
     <!DOCTYPE html>
     <html lang="fr">
@@ -80,7 +111,7 @@ export async function sendInvitationEmail({
     <body>
       <div class="wrapper">
         <div class="header">
-          <img src="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/logo-mrs.png"
+          <img src="${logoSrc}"
                alt="MRS &amp; CORLAY"
                width="72" height="72"
                style="border-radius: 12px; margin-bottom: 14px; display: block; margin-left: auto; margin-right: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.25);" />
@@ -98,28 +129,29 @@ export async function sendInvitationEmail({
 
           <div class="info-card">
             <div class="info-title">📋 Consignes importantes de composition :</div>
-            <ul style="margin: 6px 0 0; padding-left: 18px; line-height: 1.7;">
-              <li><strong>Environnement calme :</strong> Assurez-vous d'une connexion internet stable avant d'entamer l'épreuve.</li>
-              <li><strong>Chronomètre actif :</strong> Le temps imparti débutera dès la validation de votre identité sur la page d'accueil.</li>
-              <li><strong>Sauvegarde continue :</strong> Toutes vos réponses sont enregistrées automatiquement en temps réel.</li>
+            <ul style="margin: 6px 0 0; padding-left: 18px; line-height: 1.6;">
+              <li>Installez-vous dans un endroit calme avec une <strong>connexion internet stable</strong>.</li>
+              <li>Le chronomètre se déclenchera dès la confirmation de votre identité.</li>
+              <li>Toute sortie de page ou tentative de triche sera journalisée.</li>
+              <li>Ce lien d'accès personnel restera valide pendant <strong>${expiresInDays} jours</strong>.</li>
             </ul>
           </div>
 
           <div class="btn-wrapper">
-            <a href="${invitationUrl}" class="btn" target="_blank">Démarrer mon évaluation technique →</a>
+            <a href="${invitationUrl}" class="btn">
+              Démarrer mon évaluation technique &rarr;
+            </a>
           </div>
 
-          <p style="font-size: 13px; color: #475569; margin-top: 24px;">
-            Ce lien sécurisé vous est personnellement attribué et reste valable pendant <strong>${expiresInDays} jours</strong>.<br/>
-            Si le bouton ne s'affiche pas correctement, vous pouvez copier et coller l'adresse ci-après directement dans votre navigateur :
+          <p style="font-size: 12px; color: #64748b; margin-top: 24px;">
+            Si le bouton ci-dessus ne fonctionne pas, copiez et collez l'adresse suivante directement dans la barre d'adresse de votre navigateur :
           </p>
-
           <div class="direct-link">
-            <a href="${invitationUrl}" style="color: #E06810; text-decoration: none;">${invitationUrl}</a>
+            <a href="${invitationUrl}" style="color: #E06810; text-decoration: underline;">${invitationUrl}</a>
           </div>
 
-          <p style="font-size: 13px; color: #475569; margin-top: 24px;">
-            Nous vous souhaitons pleine réussite dans le déroulement de votre composition.<br/><br/>
+          <p style="font-size: 13px; color: #475569; margin-top: 28px;">
+            Nous vous souhaitons pleine réussite dans le passage de cette épreuve.<br/>
             Bien cordialement,<br/>
             <strong>Le Comité de Recrutement MRS &amp; CORLAY</strong>
           </p>
@@ -135,7 +167,7 @@ export async function sendInvitationEmail({
 
   const text = `Bonjour ${candidateName},
 
-Votre candidature a été retenue pour participer à l'épreuve d'évaluation technique pour le poste : ${campaignTitle}.
+Votre candidature a été retenue pour participer à l'épreuve d'évaluation technique pour le poste : "${campaignTitle}".
 
 Accédez directement à votre session d'examen via le lien suivant :
 ${invitationUrl}
@@ -157,6 +189,7 @@ Le Comité de Recrutement MRS & CORLAY`;
       subject: `Convocation à l'épreuve d'évaluation technique — ${campaignTitle}`,
       text,
       html,
+      attachments,
     });
 
     return { success: true, simulated: false, messageId: info.messageId };
@@ -221,7 +254,7 @@ export async function sendResultEmail({
     auth: { user, pass },
   });
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const { src: logoSrc, attachments } = getLogoConfig();
 
   const html = `
     <!DOCTYPE html>
@@ -246,7 +279,7 @@ export async function sendResultEmail({
     <body>
       <div class="wrapper">
         <div class="header">
-          <img src="${appUrl}/logo-mrs.png" alt="MRS &amp; CORLAY" width="72" height="72"
+          <img src="${logoSrc}" alt="MRS &amp; CORLAY" width="72" height="72"
                style="border-radius: 12px; margin-bottom: 14px; display: block; margin-left: auto; margin-right: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.25);" />
           <h1>MRS &amp; CORLAY HOLDINGS</h1>
           <p>Direction des Ressources Humaines</p>
@@ -315,6 +348,7 @@ Le Comité de Recrutement MRS & CORLAY`;
       subject: `Résultat de votre évaluation technique — ${campaignTitle}`,
       text,
       html,
+      attachments,
     });
     return { success: true, simulated: false, messageId: info.messageId };
   } catch (error: unknown) {
@@ -323,4 +357,3 @@ Le Comité de Recrutement MRS & CORLAY`;
     return { success: false, simulated: false, error: msg };
   }
 }
-

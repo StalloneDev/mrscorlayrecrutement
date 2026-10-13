@@ -137,3 +137,48 @@ export async function updateCampaignQuestionsAction(campaignId: string, question
   revalidatePath(`/campaigns/${campaignId}`);
   return campaign;
 }
+
+export async function updateCampaignAction(campaignId: string, data: {
+  title: string;
+  reference: string;
+  description: string;
+  durationMinutes: number;
+  passingScore: number;
+  shortlistSize: number;
+  opensAt?: string | null;
+  closesAt?: string | null;
+}) {
+  if (!data.title || !data.reference) {
+    throw new Error("Le titre et la référence sont obligatoires.");
+  }
+
+  const [campaign] = await db
+    .update(campaignsTable)
+    .set({
+      title: data.title,
+      reference: data.reference,
+      description: data.description,
+      durationMinutes: data.durationMinutes,
+      passingScore: data.passingScore,
+      shortlistSize: data.shortlistSize,
+      opensAt: data.opensAt ? new Date(data.opensAt) : null,
+      closesAt: data.closesAt ? new Date(data.closesAt) : null,
+      updatedAt: new Date(),
+    })
+    .where(eq(campaignsTable.id, campaignId))
+    .returning();
+
+  await logAuditEvent({
+    companyId: campaign.companyId,
+    action: "CAMPAIGN_UPDATED",
+    entityType: "campaign",
+    entityId: campaignId,
+    detail: { title: data.title },
+  });
+
+  revalidatePath(`/campaigns/${campaignId}`);
+  revalidatePath("/campaigns");
+  revalidatePath("/dashboard");
+  return campaign;
+}
+

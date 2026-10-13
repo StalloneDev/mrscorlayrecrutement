@@ -9,10 +9,12 @@ import {
   questionsTable,
   assessmentAttemptsTable,
   answersTable,
+  gradesTable,
 } from "@/db";
 import { eq, and, isNull, gt, inArray } from "drizzle-orm";
 import { hashInvitationToken } from "@/lib/security";
 import { logAuditEvent } from "@/lib/audit";
+import { autoGradeAttempt } from "@/lib/autoGrade";
 
 export async function getInvitationData(token: string) {
   const tokenHash = hashInvitationToken(token);
@@ -317,6 +319,100 @@ export async function submitAssessmentAction(attemptId: string) {
     .update(candidatesTable)
     .set({ status: candidateStatus, updatedAt: now })
     .where(eq(candidatesTable.id, attempt.candidateId));
+
+  // ── CORRECTION AUTOMATIQUE DES QCM ─────────────────────────────────────
+  try {
+    const [campaign] = await db
+      .select()
+      .from(campaignsTable)
+      .where(eq(campaignsTable.id, attempt.campaignId))
+      .limit(1);
+
+    const questionIds = campaign?.questionIds ?? [];
+    if (questionIds.length > 0) {
+      const rawQuestions = await db
+        .select({
+          id: questionsTable.id,
+          kind: questionsTable.kind,
+          points: questionsTable.points,
+          choices: questionsTable.choices,
+          expectedAnswer: questionsTable.expectedAnswer,
+        })
+        .from(questionsTable)
+        .where(inArray(questionsTable.id, questionIds));
+
+      const answers = await db
+        .select()
+        .from(answersTable)
+        .where(eq(answersTable.attemptId, attemptId));
+
+      const answersMap = Object.fromEntries(answers.map((a) => [a.questionId, a.value]));
+
+      const { autoGraded, manualRequired } = autoGradeAttempt({
+        questions: rawQuestions,
+        answersMap,
+      });
+
+      // Insérer les notes automatiques
+      for (const grade of autoGraded) {
+        await db
+          .insert(gradesTable)
+          .values({
+            attemptId,
+            questionId: grade.questionId,
+            score: grade.score,
+            comment: grade.comment,
+            validated: false, // Le RH doit valider pour officialiser
+          })
+          .onConflictDoUpdate({
+            target: [gradesTable.attemptId, gradesTable.questionId],
+            set: {
+              score: grade.score,
+              comment: grade.comment,
+              validated: false,
+              updatedAt: now,
+            },
+          });
+      }
+
+      // Si TOUS les QCM (aucune question manuelle), valider et calculer le score directement
+      if (manualRequired.length === 0 && autoGraded.length > 0) {
+        const totalPoints = rawQuestions.reduce((sum, q) => sum + q.points, 0);
+        const earnedPoints = autoGraded.reduce((sum, g) => sum + g.score, 0);
+        const percentageScore = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
+
+        // Valider les notes automatiquement
+        for (const grade of autoGraded) {
+          await db
+            .update(gradesTable)
+            .set({ validated: true, updatedAt: now })
+            .where(
+              and(
+                eq(gradesTable.attemptId, attemptId),
+                eq(gradesTable.questionId, grade.questionId)
+              )
+            );
+        }
+
+        await db
+          .update(candidatesTable)
+          .set({ score: percentageScore, status: "reviewed", updatedAt: now })
+          .where(eq(candidatesTable.id, attempt.candidateId));
+
+        await logAuditEvent({
+          companyId: null,
+          action: "ASSESSMENT_AUTO_GRADED",
+          entityType: "assessment",
+          entityId: attemptId,
+          detail: { percentageScore, autoGradedCount: autoGraded.length },
+        });
+      }
+    }
+  } catch (err) {
+    console.error("[AutoGrade] Erreur lors de la correction automatique :", err);
+    // Ne pas bloquer la soumission en cas d'erreur d'auto-correction
+  }
+  // ────────────────────────────────────────────────────────────────────────
 
   await logAuditEvent({
     companyId: null,

@@ -3,6 +3,8 @@ import { Navbar } from "@/components/Navbar";
 import { StatusSelector } from "@/components/StatusSelector";
 import { CandidateRowActions } from "@/components/CandidateRowActions";
 import { InviteCandidatesButton } from "@/components/InviteCandidatesButton";
+import { EditCampaignButton } from "@/components/EditCampaignButton";
+import { ImportCSVButton } from "@/components/ImportCSVButton";
 import { getCampaignById, updateCampaignStatusAction, updateCampaignQuestionsAction } from "@/actions/campaigns";
 import { getQuestions } from "@/actions/questions";
 import { getCandidatesByCampaign, addCandidateAction, generateInvitationsAction } from "@/actions/candidates";
@@ -94,14 +96,17 @@ export default async function CampaignDetailPage({
               <p>{campaign.description || "Aucune description saisie."}</p>
             </div>
 
-            {/* Sélecteur de statut */}
-            <form action={handleStatusChange} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span className={`badge tone-${campaign.status === "published" ? "green" : campaign.status === "in_progress" ? "blue" : "neutral"}`}>
-                <i />
-                {campaign.status}
-              </span>
-              <StatusSelector currentStatus={campaign.status} />
-            </form>
+            {/* Actions d'en-tête & statut */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <EditCampaignButton campaign={campaign} />
+              <form action={handleStatusChange} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span className={`badge tone-${campaign.status === "published" ? "green" : campaign.status === "in_progress" ? "blue" : "neutral"}`}>
+                  <i />
+                  {campaign.status}
+                </span>
+                <StatusSelector currentStatus={campaign.status} />
+              </form>
+            </div>
           </div>
 
           {/* Cartes de synthèse */}
@@ -229,9 +234,12 @@ export default async function CampaignDetailPage({
               </div>
 
               {/* Actions groupées */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
                 <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Liste des candidats</h3>
-                <InviteCandidatesButton campaignId={campaign.id} candidates={candidates} />
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <ImportCSVButton campaignId={campaign.id} companyId={campaign.companyId} />
+                  <InviteCandidatesButton campaignId={campaign.id} candidates={candidates} />
+                </div>
               </div>
 
               {/* Tableau candidats */}

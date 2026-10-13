@@ -87,3 +87,83 @@ export async function createQuestionAction(formData: FormData) {
   revalidatePath("/questions");
   return question;
 }
+
+export async function updateQuestionAction(questionId: string, formData: FormData) {
+  const companyId = (formData.get("companyId") as string) || null;
+  const prompt = (formData.get("prompt") as string)?.trim();
+  const kind = (formData.get("kind") as string) || "single_choice";
+  const points = Number(formData.get("points") || 5);
+  const required = formData.get("required") === "on" || formData.get("required") === "true";
+  const category = (formData.get("category") as string)?.trim() || "Général";
+  const competency = (formData.get("competency") as string)?.trim() || "";
+  const difficulty = (formData.get("difficulty") as string) || "medium";
+  const expectedAnswer = (formData.get("expectedAnswer") as string)?.trim() || null;
+  const maxCharacters = formData.get("maxCharacters") ? Number(formData.get("maxCharacters")) : null;
+
+  const rawChoices = formData.get("choices") as string;
+  let choices: string[] = [];
+  if (rawChoices) {
+    choices = rawChoices
+      .split("\n")
+      .map((c) => c.trim())
+      .filter(Boolean);
+  }
+
+  if (!prompt) {
+    throw new Error("L'énoncé de la question est obligatoire.");
+  }
+
+  const [question] = await db
+    .update(questionsTable)
+    .set({
+      companyId,
+      prompt,
+      kind,
+      points,
+      required,
+      category,
+      competency,
+      difficulty,
+      choices,
+      expectedAnswer,
+      maxCharacters,
+      updatedAt: new Date(),
+    })
+    .where(eq(questionsTable.id, questionId))
+    .returning();
+
+  await logAuditEvent({
+    companyId,
+    action: "QUESTION_UPDATED",
+    entityType: "question",
+    entityId: questionId,
+    detail: { category, competency, points },
+  });
+
+  revalidatePath("/questions");
+  return question;
+}
+
+export async function deleteQuestionAction(questionId: string) {
+  const [question] = await db
+    .select()
+    .from(questionsTable)
+    .where(eq(questionsTable.id, questionId))
+    .limit(1);
+
+  if (!question) return { error: "Question introuvable." };
+
+  await db.delete(questionsTable).where(eq(questionsTable.id, questionId));
+
+  await logAuditEvent({
+    companyId: question.companyId ?? null,
+    action: "QUESTION_DELETED",
+    entityType: "question",
+    entityId: questionId,
+    detail: { prompt: question.prompt.slice(0, 80) },
+  });
+
+  revalidatePath("/questions");
+  return { success: true };
+}
+

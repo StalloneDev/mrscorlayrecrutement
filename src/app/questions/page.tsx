@@ -1,6 +1,7 @@
 import { Sidebar } from "@/components/Sidebar";
 import { Navbar } from "@/components/Navbar";
 import { CompanyFilter } from "@/components/CompanyFilter";
+import { QuestionRowActions } from "@/components/QuestionRowActions";
 import { getCompanies } from "@/actions/campaigns";
 import { getQuestions, createQuestionAction } from "@/actions/questions";
 import { BookOpen, Plus, Tag, Layers, CheckCircle2 } from "lucide-react";
@@ -178,6 +179,7 @@ export default async function QuestionsPage({
                       {q.points} pt{q.points > 1 ? "s" : ""}
                     </strong>
                     <small style={{ fontSize: 11, color: "#8d979c" }}>{q.kind}</small>
+                    <QuestionRowActions question={q} companies={companies} />
                   </div>
                 </div>
               ))

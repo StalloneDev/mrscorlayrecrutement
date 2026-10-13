@@ -166,3 +166,161 @@ Le Comité de Recrutement MRS & CORLAY`;
     return { success: false, simulated: false, error: msg };
   }
 }
+
+export interface SendResultEmailParams {
+  to: string;
+  candidateName: string;
+  campaignTitle: string;
+  score: number;
+  passingScore?: number;
+}
+
+export async function sendResultEmail({
+  to,
+  candidateName,
+  campaignTitle,
+  score,
+  passingScore = 60,
+}: SendResultEmailParams) {
+  const host = process.env.SMTP_HOST;
+  const port = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 587;
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+
+  let senderName = "MRS & CORLAY Recrutement";
+  if (process.env.SMTP_FROM) {
+    const cleaned = process.env.SMTP_FROM.replace(/\\"/g, '"').replace(/^"/, "").replace(/"$/, "");
+    const nameMatch = cleaned.match(/^"?([^<"]+)"?\s*</);
+    if (nameMatch && nameMatch[1]) {
+      senderName = nameMatch[1].trim();
+    }
+  }
+
+  const fromSender = {
+    name: senderName,
+    address: user || "lodouiran@mrsholdings.com",
+  };
+
+  const isEligible = score >= passingScore;
+
+  if (!host || !user || !pass) {
+    console.log(
+      `[Email Simulation] Résultat envoyé à ${to} (${candidateName}) pour "${campaignTitle}": score=${score}%, admissible=${isEligible}`
+    );
+    return {
+      success: true,
+      simulated: true,
+      message: "SMTP non configuré : envoi simulé en console.",
+    };
+  }
+
+  const transporter = nodemailer.createTransport({
+    host,
+    port,
+    secure: port === 465,
+    auth: { user, pass },
+  });
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+  const html = `
+    <!DOCTYPE html>
+    <html lang="fr">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; margin: 0; padding: 24px; color: #1e293b; }
+        .wrapper { max-width: 620px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; }
+        .header { background: linear-gradient(135deg, #E06810 0%, #B44E09 100%); padding: 36px 30px; text-align: center; color: #ffffff; }
+        .header h1 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
+        .header p { margin: 6px 0 0; font-size: 13px; opacity: 0.95; letter-spacing: 0.05em; text-transform: uppercase; }
+        .content { padding: 36px 32px; line-height: 1.6; }
+        .greeting { font-size: 16px; font-weight: 700; color: #0f172a; margin-bottom: 12px; }
+        .score-card { background: ${isEligible ? "#f0fdf4" : "#fff7ed"}; border: 2px solid ${isEligible ? "#86efac" : "#fed7aa"}; border-radius: 14px; padding: 24px; text-align: center; margin: 24px 0; }
+        .score-val { font-size: 38px; font-weight: 900; color: ${isEligible ? "#15803d" : "#c2410c"}; }
+        .score-label { font-size: 13px; font-weight: 700; color: #475569; margin-top: 4px; }
+        .footer { background: #f8fafc; padding: 20px 30px; font-size: 11px; color: #94a3b8; text-align: center; border-top: 1px solid #e2e8f0; }
+      </style>
+    </head>
+    <body>
+      <div class="wrapper">
+        <div class="header">
+          <img src="${appUrl}/logo-mrs.png" alt="MRS &amp; CORLAY" width="72" height="72"
+               style="border-radius: 12px; margin-bottom: 14px; display: block; margin-left: auto; margin-right: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.25);" />
+          <h1>MRS &amp; CORLAY HOLDINGS</h1>
+          <p>Direction des Ressources Humaines</p>
+        </div>
+        
+        <div class="content">
+          <div class="greeting">Bonjour ${candidateName},</div>
+          
+          <p>
+            Nous vous remercions pour votre participation à l'épreuve d'évaluation technique en ligne relative au poste :<br/>
+            <strong style="color: #E06810; font-size: 15px;">« ${campaignTitle} »</strong>.
+          </p>
+
+          <p>
+            Votre copie a été officiellement corrigée et validée par notre jury d'évaluation. Voici votre résultat global :
+          </p>
+
+          <div class="score-card">
+            <div class="score-val">${score}%</div>
+            <div class="score-label">
+              ${isEligible ? "✓ Seuil de réussite atteint (≥ " + passingScore + "%)" : "Seuil minimum requis : " + passingScore + "%"}
+            </div>
+          </div>
+
+          <p style="font-size: 14px; color: #334155;">
+            ${
+              isEligible
+                ? "Félicitations ! Votre performance vous qualifie pour la suite du processus de sélection. Notre équipe des Ressources Humaines prendra contact avec vous prochainement pour les prochaines étapes."
+                : "Nous vous remercions chaleureusement pour l'intérêt porté à notre Groupe. Bien que votre candidature n'ait pas atteint le seuil requis pour cette session, votre profil est conservé dans notre vivier pour de futures opportunités."
+            }
+          </p>
+
+          <p style="font-size: 13px; color: #475569; margin-top: 24px;">
+            Bien cordialement,<br/>
+            <strong>Le Comité de Recrutement MRS &amp; CORLAY</strong>
+          </p>
+        </div>
+
+        <div class="footer">
+          MRS &amp; CORLAY Holdings · Système automatisé d'évaluation des compétences · Cet email est envoyé automatiquement, merci de ne pas y répondre directement.
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const text = `Bonjour ${candidateName},
+
+Votre évaluation pour l'épreuve "${campaignTitle}" a été officiellement corrigée.
+
+Votre résultat global : ${score}% (Seuil requis : ${passingScore}%).
+
+${
+  isEligible
+    ? "Félicitations ! Vous êtes qualifié(e) pour les prochaines étapes de recrutement. Notre équipe RH vous contactera sous peu."
+    : "Nous vous remercions pour votre participation. Bien que le seuil n'ait pas été atteint pour cette session, votre profil reste dans notre vivier de candidats."
+}
+
+Cordialement,
+Le Comité de Recrutement MRS & CORLAY`;
+
+  try {
+    const info = await transporter.sendMail({
+      from: fromSender,
+      to,
+      subject: `Résultat de votre évaluation technique — ${campaignTitle}`,
+      text,
+      html,
+    });
+    return { success: true, simulated: false, messageId: info.messageId };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Erreur d'envoi SMTP";
+    console.error(`[SMTP ERROR] Échec envoi résultat à ${to}:`, msg);
+    return { success: false, simulated: false, error: msg };
+  }
+}
+

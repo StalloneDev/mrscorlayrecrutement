@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   FileSpreadsheet,
   LogOut,
+  Settings,
 } from "lucide-react";
 import { logoutAction } from "@/actions/auth";
 
@@ -24,6 +25,7 @@ export function Sidebar() {
     { href: "/candidates", label: "Candidats", icon: Users },
     { href: "/questions", label: "Banque de questions", icon: BookOpen },
     { href: "/audit", label: "Journal d'audit", icon: ShieldCheck },
+    { href: "/settings", label: "Paramètres RH", icon: Settings },
   ];
 
   return (

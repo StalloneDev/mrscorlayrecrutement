@@ -239,3 +239,136 @@ export async function deleteCandidateAction(candidateId: string, campaignId: str
   return { success: true };
 }
 
+export async function importCandidatesFromCSVAction(
+  campaignId: string,
+  companyId: string,
+  rows: { firstName: string; lastName: string; email: string; phone?: string }[]
+) {
+  let added = 0;
+  let skipped = 0;
+  const errors: string[] = [];
+
+  for (const row of rows) {
+    const email = row.email.trim().toLowerCase();
+    const firstName = row.firstName.trim();
+    const lastName = row.lastName.trim();
+    const phone = row.phone?.trim() || null;
+
+    if (!email || !firstName || !lastName) {
+      errors.push(`Ligne ignorée (données manquantes) : ${JSON.stringify(row)}`);
+      skipped++;
+      continue;
+    }
+
+    const [existing] = await db
+      .select({ id: candidatesTable.id })
+      .from(candidatesTable)
+      .where(and(eq(candidatesTable.campaignId, campaignId), eq(candidatesTable.email, email)))
+      .limit(1);
+
+    if (existing) {
+      skipped++;
+      continue;
+    }
+
+    try {
+      await db.insert(candidatesTable).values({
+        companyId,
+        campaignId,
+        firstName,
+        lastName,
+        email,
+        phone,
+        status: "added",
+      });
+      added++;
+    } catch {
+      errors.push(`Erreur pour ${email}`);
+      skipped++;
+    }
+  }
+
+  await logAuditEvent({
+    companyId,
+    action: "CANDIDATES_IMPORTED",
+    entityType: "campaign",
+    entityId: campaignId,
+    detail: { added, skipped },
+  });
+
+  revalidatePath(`/campaigns/${campaignId}`);
+  return { added, skipped, errors };
+}
+
+export async function resendInvitationAction(candidateId: string, campaignId: string) {
+  const [candidate] = await db
+    .select()
+    .from(candidatesTable)
+    .where(eq(candidatesTable.id, candidateId))
+    .limit(1);
+
+  if (!candidate) return { error: "Candidat introuvable." };
+
+  const [invitation] = await db
+    .select()
+    .from(invitationsTable)
+    .where(and(eq(invitationsTable.candidateId, candidateId), eq(invitationsTable.campaignId, campaignId)))
+    .limit(1);
+
+  if (!invitation) return { error: "Aucune invitation trouvée pour ce candidat." };
+
+  const rawToken = generateInvitationToken();
+  const newHash = hashInvitationToken(rawToken);
+  if (!newHash) return { error: "Erreur de génération du token." };
+
+  const newExpiresAt = new Date();
+  newExpiresAt.setDate(newExpiresAt.getDate() + 14);
+
+  await db
+    .update(invitationsTable)
+    .set({ tokenHash: newHash, expiresAt: newExpiresAt, revokedAt: null })
+    .where(eq(invitationsTable.id, invitation.id));
+
+  await db
+    .update(candidatesTable)
+    .set({ invitedAt: new Date(), updatedAt: new Date() })
+    .where(eq(candidatesTable.id, candidateId));
+
+  const [campaign] = await db
+    .select({ title: campaignsTable.title })
+    .from(campaignsTable)
+    .where(eq(campaignsTable.id, campaignId))
+    .limit(1);
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const invitationUrl = `${appUrl}/invitation/${rawToken}`;
+  const candidateName = `${candidate.firstName} ${candidate.lastName}`;
+
+  let emailSent = true;
+  try {
+    const emailRes = await sendInvitationEmail({
+      to: candidate.email,
+      candidateName,
+      campaignTitle: campaign?.title || "Campagne de Recrutement",
+      invitationUrl,
+      expiresInDays: 14,
+    });
+    emailSent = emailRes?.success ?? true;
+  } catch (err) {
+    console.error("Erreur relance email :", err);
+    emailSent = false;
+  }
+
+  await logAuditEvent({
+    companyId: candidate.companyId,
+    action: "INVITATION_RESENT",
+    entityType: "candidate",
+    entityId: candidateId,
+    detail: { email: candidate.email, emailSent },
+  });
+
+  revalidatePath(`/campaigns/${campaignId}`);
+  return { success: true, emailSent, invitationUrl };
+}
+
+

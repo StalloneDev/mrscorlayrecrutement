@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { updateCandidateAction, deleteCandidateAction } from "@/actions/candidates";
-import { Edit2, Trash2, X, Check } from "lucide-react";
+import { useState, useTransition } from "react";
+import { updateCandidateAction, deleteCandidateAction, resendInvitationAction } from "@/actions/candidates";
+import { Edit2, Trash2, X, Check, RotateCcw, Send } from "lucide-react";
 
 interface Candidate {
   id: string;
@@ -22,6 +22,33 @@ export function CandidateRowActions({
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isResending, startResendTransition] = useTransition();
+  const [resendStatus, setResendStatus] = useState<string | null>(null);
+
+  const handleResend = () => {
+    if (!confirm(`Renvoyer un e-mail d'invitation à ${candidate.firstName} ${candidate.lastName} (${candidate.email}) ?`)) {
+      return;
+    }
+    startResendTransition(async () => {
+      try {
+        const res = await resendInvitationAction(candidate.id, campaignId);
+        if ("error" in res && res.error) {
+          alert("Erreur : " + res.error);
+        } else {
+          setResendStatus("Relancé !");
+          setTimeout(() => setResendStatus(null), 4000);
+          if (res.emailSent) {
+            alert(`✓ E-mail d'invitation renvoyé avec succès à ${candidate.email} !`);
+          } else {
+            alert(`Invitation régénérée avec succès. Attention: l'e-mail n'a pas pu être délivré immédiatement. Lien direct: ${res.invitationUrl}`);
+          }
+        }
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Erreur";
+        alert("Erreur lors de la relance : " + msg);
+      }
+    });
+  };
 
   const handleDelete = async () => {
     if (confirm(`Êtes-vous sûr de vouloir supprimer le candidat ${candidate.firstName} ${candidate.lastName} ?`)) {
@@ -40,6 +67,31 @@ export function CandidateRowActions({
   return (
     <>
       <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginLeft: 8 }}>
+        {candidate.status === "invited" && (
+          <button
+            type="button"
+            onClick={handleResend}
+            disabled={isResending}
+            title="Relancer l'invitation par e-mail"
+            style={{
+              background: "#eff6ff",
+              border: "1px solid #bfdbfe",
+              borderRadius: 6,
+              padding: "5px 8px",
+              color: "#2563eb",
+              cursor: isResending ? "not-allowed" : "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+              fontSize: 11,
+              fontWeight: 600,
+            }}
+          >
+            <RotateCcw size={12} className={isResending ? "spin" : ""} />
+            <span>{resendStatus ? resendStatus : isResending ? "..." : "Relancer"}</span>
+          </button>
+        )}
+
         <button
           type="button"
           onClick={() => setIsEditing(true)}
@@ -57,6 +109,7 @@ export function CandidateRowActions({
         >
           <Edit2 size={13} />
         </button>
+
 
         <button
           type="button"

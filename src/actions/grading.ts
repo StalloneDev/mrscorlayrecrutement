@@ -9,9 +9,11 @@ import {
   answersTable,
   gradesTable,
 } from "@/db";
-import { eq, inArray, desc } from "drizzle-orm";
+import { eq, inArray, desc, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { logAuditEvent } from "@/lib/audit";
+import { autoGradeAttempt } from "@/lib/autoGrade";
+import { sendResultEmail } from "@/lib/email";
 
 export async function getAttemptForReview(attemptId: string) {
   const [attempt] = await db
@@ -61,18 +63,25 @@ export async function getAttemptForReview(attemptId: string) {
 
   const isValidated = grades.length > 0 && grades.every((g) => g.validated);
 
-  const questionsWithReview = questions.map((q) => ({
-    id: q.id,
-    prompt: q.prompt,
-    kind: q.kind,
-    points: q.points,
-    expectedAnswer: q.expectedAnswer,
-    competency: q.competency,
-    answer: answersMap[q.id] || "",
-    score: gradesMap[q.id]?.score ?? null,
-    comment: gradesMap[q.id]?.comment ?? "",
-    validated: gradesMap[q.id]?.validated ?? false,
-  }));
+  const questionsWithReview = questions.map((q) => {
+    const grade = gradesMap[q.id];
+    const isAutoGradable =
+      q.kind !== "long_text" && q.kind !== "short_text" && q.kind !== "text" && !!q.expectedAnswer;
+    return {
+      id: q.id,
+      prompt: q.prompt,
+      kind: q.kind,
+      points: q.points,
+      choices: (q.choices as string[]) || [],
+      expectedAnswer: q.expectedAnswer,
+      competency: q.competency,
+      answer: answersMap[q.id] || "",
+      score: grade?.score ?? null,
+      comment: grade?.comment ?? "",
+      validated: grade?.validated ?? false,
+      isAutoGraded: isAutoGradable && grade !== undefined,
+    };
+  });
 
   return {
     attemptId: attempt.id,
@@ -165,6 +174,31 @@ export async function saveAttemptGradesAction({
       entityId: attemptId,
       detail: { candidateId: attempt.candidateId, percentageScore, totalScore, maxTotal },
     });
+
+    // Envoi de l'e-mail de résultat au candidat (non bloquant)
+    try {
+      const [cand] = await db
+        .select({
+          email: candidatesTable.email,
+          firstName: candidatesTable.firstName,
+          lastName: candidatesTable.lastName,
+        })
+        .from(candidatesTable)
+        .where(eq(candidatesTable.id, attempt.candidateId))
+        .limit(1);
+
+      if (cand && cand.email) {
+        await sendResultEmail({
+          to: cand.email,
+          candidateName: `${cand.firstName} ${cand.lastName}`,
+          campaignTitle: campaign.title,
+          score: percentageScore,
+          passingScore: campaign.passingScore || 60,
+        });
+      }
+    } catch (emailErr) {
+      console.error("[Email Result Error] Échec de l'envoi de l'e-mail de résultat :", emailErr);
+    }
   }
 
   revalidatePath(`/review/${attemptId}`);
@@ -220,5 +254,118 @@ export async function getCampaignRankings(campaignId: string) {
     totalReviewed: reviewed.length,
     topCandidates,
     eligibleCandidates,
+  };
+}
+
+/**
+ * Server Action : ré-applique la correction automatique des QCM pour un attempt existant.
+ * Utilisé via le bouton "Réappliquer la correction automatique" dans ReviewClient.
+ */
+export async function autoGradeAttemptAction(attemptId: string) {
+  const [attempt] = await db
+    .select()
+    .from(assessmentAttemptsTable)
+    .where(eq(assessmentAttemptsTable.id, attemptId))
+    .limit(1);
+
+  if (!attempt) return { error: "Tentative introuvable." };
+
+  const [campaign] = await db
+    .select()
+    .from(campaignsTable)
+    .where(eq(campaignsTable.id, attempt.campaignId))
+    .limit(1);
+
+  const questionIds = campaign?.questionIds ?? [];
+  if (questionIds.length === 0) return { error: "Aucune question dans cette campagne." };
+
+  const rawQuestions = await db
+    .select({
+      id: questionsTable.id,
+      kind: questionsTable.kind,
+      points: questionsTable.points,
+      choices: questionsTable.choices,
+      expectedAnswer: questionsTable.expectedAnswer,
+    })
+    .from(questionsTable)
+    .where(inArray(questionsTable.id, questionIds));
+
+  const answers = await db
+    .select()
+    .from(answersTable)
+    .where(eq(answersTable.attemptId, attemptId));
+
+  const answersMap = Object.fromEntries(answers.map((a) => [a.questionId, a.value]));
+
+  const { autoGraded, manualRequired } = autoGradeAttempt({
+    questions: rawQuestions,
+    answersMap,
+  });
+
+  if (autoGraded.length === 0) {
+    return { error: "Aucune question auto-corrigeable trouvée (ou réponses attendues manquantes)." };
+  }
+
+  const now = new Date();
+
+  for (const grade of autoGraded) {
+    await db
+      .insert(gradesTable)
+      .values({
+        attemptId,
+        questionId: grade.questionId,
+        score: grade.score,
+        comment: grade.comment,
+        validated: false,
+      })
+      .onConflictDoUpdate({
+        target: [gradesTable.attemptId, gradesTable.questionId],
+        set: {
+          score: grade.score,
+          comment: grade.comment,
+          validated: false,
+          updatedAt: now,
+        },
+      });
+  }
+
+  // Si 100% QCM → valider automatiquement et mettre à jour le score candidat
+  if (manualRequired.length === 0 && autoGraded.length > 0) {
+    const totalPoints = rawQuestions.reduce((sum, q) => sum + q.points, 0);
+    const earnedPoints = autoGraded.reduce((sum, g) => sum + g.score, 0);
+    const percentageScore = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
+
+    for (const grade of autoGraded) {
+      await db
+        .update(gradesTable)
+        .set({ validated: true, updatedAt: now })
+        .where(
+          and(
+            eq(gradesTable.attemptId, attemptId),
+            eq(gradesTable.questionId, grade.questionId)
+          )
+        );
+    }
+
+    await db
+      .update(candidatesTable)
+      .set({ score: percentageScore, status: "reviewed", updatedAt: now })
+      .where(eq(candidatesTable.id, attempt.candidateId));
+  }
+
+  await logAuditEvent({
+    companyId: null,
+    action: "ASSESSMENT_AUTO_GRADED",
+    entityType: "assessment",
+    entityId: attemptId,
+    detail: { autoGradedCount: autoGraded.length, manualRequired: manualRequired.length },
+  });
+
+  revalidatePath(`/review/${attemptId}`);
+
+  return {
+    success: true,
+    autoGradedCount: autoGraded.length,
+    manualRequired: manualRequired.length,
   };
 }

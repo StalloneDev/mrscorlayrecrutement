@@ -1,4 +1,4 @@
-﻿import { getAttemptForReview } from "@/actions/grading";
+import { getAttemptForReview } from "@/actions/grading";
 import { ReviewClient } from "./ReviewClient";
 
 interface Props {
@@ -21,6 +21,7 @@ export default async function ReviewPage({ params }: Props) {
       submittedAt={data.submittedAt}
       initialValidated={data.validated}
       questions={data.questions}
+      proctoring={data.proctoring}
     />
   );
 }

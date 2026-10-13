@@ -1,9 +1,23 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
-import { saveCandidateAnswerAction, submitAssessmentAction } from "@/actions/assessments";
+import { useState, useEffect, useRef, useTransition } from "react";
+import {
+  saveCandidateAnswerAction,
+  submitAssessmentAction,
+  recordProctoringEventAction,
+} from "@/actions/assessments";
 import { Brand } from "@/components/Brand";
-import { Clock, CheckCircle2, AlertCircle, ArrowLeft, ArrowRight, Send, ShieldCheck } from "lucide-react";
+import {
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  ArrowLeft,
+  ArrowRight,
+  Send,
+  ShieldCheck,
+  ShieldAlert,
+  AlertTriangle,
+} from "lucide-react";
 
 interface Question {
   id: string;
@@ -42,12 +56,143 @@ export function AssessmentClient({
   const [answers, setAnswers] = useState<Record<string, string>>(initialAnswers);
   const [secondsRemaining, setSecondsRemaining] = useState(initialSecondsRemaining);
   const [isSubmitted, setIsSubmitted] = useState(Boolean(initialSubmittedAt));
+  const [submissionReason, setSubmissionReason] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "error">("saved");
   const [isPending, startTransition] = useTransition();
 
+  // ── ÉTATS ANTI-TRICHE (PROCTORING) ──────────────────────────────────────────
+  const [warningCount, setWarningCount] = useState(0);
+  const [showWarningModal, setShowWarningModal] = useState(false);
+  const [copyToast, setCopyToast] = useState<string | null>(null);
+
+  const isPageHiddenRef = useRef(false);
+  const warningCountRef = useRef(0);
+
   const currentQ = questions[currentIndex];
 
-  // Compte à rebours
+  const showCopyAlert = (msg = "⚠️ La copie ou capture du contenu est formellement interdite.") => {
+    setCopyToast(msg);
+    setTimeout(() => setCopyToast(null), 3500);
+  };
+
+  // ── GESTIONNAIRES ANTI-COPIE (OPTION 1) ─────────────────────────────────────
+  useEffect(() => {
+    if (isSubmitted) return;
+
+    const handleCopyCut = (e: ClipboardEvent) => {
+      e.preventDefault();
+      showCopyAlert("⚠️ La copie du contenu des questions est interdite.");
+      recordProctoringEventAction(attemptId, "COPY_ATTEMPT");
+    };
+
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      showCopyAlert("⚠️ Le clic droit est désactivé durant l'épreuve.");
+      recordProctoringEventAction(attemptId, "COPY_ATTEMPT");
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Bloquer DevTools: F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C
+      if (
+        e.key === "F12" ||
+        ((e.ctrlKey || e.metaKey) && e.shiftKey && ["I", "i", "J", "j", "C", "c"].includes(e.key))
+      ) {
+        e.preventDefault();
+        showCopyAlert("⚠️ L'accès aux outils de développement est interdit.");
+        recordProctoringEventAction(attemptId, "DEVTOOLS_ATTEMPT");
+        return;
+      }
+
+      // Bloquer Impression / Export PDF : Ctrl+P / Cmd+P
+      if ((e.ctrlKey || e.metaKey) && (e.key === "p" || e.key === "P")) {
+        e.preventDefault();
+        showCopyAlert("⚠️ L'impression ou la capture de l'épreuve est interdite.");
+        return;
+      }
+
+      // Bloquer Afficher source : Ctrl+U
+      if ((e.ctrlKey || e.metaKey) && (e.key === "u" || e.key === "U")) {
+        e.preventDefault();
+        return;
+      }
+
+      // Bloquer Ctrl+C / Cmd+C sur les questions
+      if ((e.ctrlKey || e.metaKey) && (e.key === "c" || e.key === "C" || e.key === "x" || e.key === "X")) {
+        const target = e.target as HTMLElement;
+        const isInput = target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA");
+        const selection = window.getSelection()?.toString() || "";
+        if (selection.length > 0 && !isInput) {
+          e.preventDefault();
+          showCopyAlert("⚠️ La copie du texte des questions est interdite.");
+          recordProctoringEventAction(attemptId, "COPY_ATTEMPT");
+        }
+      }
+    };
+
+    document.addEventListener("copy", handleCopyCut);
+    document.addEventListener("cut", handleCopyCut);
+    document.addEventListener("contextmenu", handleContextMenu);
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("copy", handleCopyCut);
+      document.removeEventListener("cut", handleCopyCut);
+      document.removeEventListener("contextmenu", handleContextMenu);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isSubmitted, attemptId]);
+
+  // ── DÉTECTION SORTIE D'ONGLET / ÉCRAN (OPTION 2) ───────────────────────────
+  useEffect(() => {
+    if (isSubmitted) return;
+
+    const handleWindowLeave = () => {
+      if (isSubmitted || isPageHiddenRef.current) return;
+      isPageHiddenRef.current = true;
+
+      const nextCount = warningCountRef.current + 1;
+      warningCountRef.current = nextCount;
+      setWarningCount(nextCount);
+
+      recordProctoringEventAction(attemptId, "TAB_SWITCH", {
+        warningNumber: nextCount,
+        timestamp: new Date().toISOString(),
+      });
+    };
+
+    const handleWindowReturn = () => {
+      if (isSubmitted || !isPageHiddenRef.current) return;
+      isPageHiddenRef.current = false;
+
+      if (warningCountRef.current >= 4) {
+        // Déclencher soumission automatique forcée pour violation proctoring
+        setSubmissionReason("proctoring_violation");
+        handleAutoSubmit("proctoring_violation");
+      } else {
+        setShowWarningModal(true);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        handleWindowLeave();
+      } else {
+        handleWindowReturn();
+      }
+    };
+
+    window.addEventListener("blur", handleWindowLeave);
+    window.addEventListener("focus", handleWindowReturn);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("blur", handleWindowLeave);
+      window.removeEventListener("focus", handleWindowReturn);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [isSubmitted, attemptId]);
+
+  // ── COMPTE À REBOURS ────────────────────────────────────────────────────────
   useEffect(() => {
     if (isSubmitted || secondsRemaining <= 0) return;
 
@@ -55,7 +200,7 @@ export function AssessmentClient({
       setSecondsRemaining((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          handleAutoSubmit();
+          handleAutoSubmit("timeout");
           return 0;
         }
         return prev - 1;
@@ -65,9 +210,12 @@ export function AssessmentClient({
     return () => clearInterval(timer);
   }, [isSubmitted, secondsRemaining]);
 
-  const handleAutoSubmit = async () => {
+  const handleAutoSubmit = async (reason?: string) => {
     try {
-      await submitAssessmentAction(attemptId);
+      if (reason === "proctoring_violation") {
+        setSubmissionReason("proctoring_violation");
+      }
+      await submitAssessmentAction(attemptId, reason);
       setIsSubmitted(true);
     } catch (e) {
       console.error("Erreur clôture auto:", e);
@@ -113,8 +261,10 @@ export function AssessmentClient({
 
   const isLowTime = secondsRemaining < 300 && secondsRemaining > 0;
 
-  // Écran de fin de composition
+  // ── ÉCRAN DE FIN DE COMPOSITION ─────────────────────────────────────────────
   if (isSubmitted) {
+    const isViolation = submissionReason === "proctoring_violation";
+
     return (
       <div
         style={{
@@ -129,7 +279,7 @@ export function AssessmentClient({
       >
         <div
           style={{
-            maxWidth: 520,
+            maxWidth: 540,
             width: "100%",
             background: "#ffffff",
             borderRadius: 16,
@@ -148,9 +298,9 @@ export function AssessmentClient({
               width: 64,
               height: 64,
               borderRadius: "50%",
-              background: "#ecfdf5",
-              color: "#059669",
-              border: "2px solid #a7f3d0",
+              background: isViolation ? "#fef2f2" : "#ecfdf5",
+              color: isViolation ? "#dc2626" : "#059669",
+              border: `2px solid ${isViolation ? "#fecaca" : "#a7f3d0"}`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -158,15 +308,25 @@ export function AssessmentClient({
               fontWeight: "bold",
             }}
           >
-            ✓
+            {isViolation ? "⚠️" : "✓"}
           </div>
 
           <h2 style={{ fontSize: 22, fontWeight: 800, color: "#1e293b", margin: "0 0 10px" }}>
-            Épreuve terminée &amp; transmise
+            {isViolation ? "Épreuve clôturée pour violation de sécurité" : "Épreuve terminée & transmise"}
           </h2>
           <p style={{ fontSize: 14, color: "#64748b", lineHeight: 1.6, margin: "0 0 20px" }}>
-            Merci <strong>{candidateName}</strong>. L&apos;ensemble de vos réponses pour l&apos;épreuve{" "}
-            <strong>{campaignTitle}</strong> a bien été enregistré avec succès.
+            {isViolation ? (
+              <>
+                Votre session pour l&apos;épreuve <strong>{campaignTitle}</strong> a été automatiquement
+                interrompue suite à des <strong>sorties d&apos;écran répétées (4 infractions)</strong>. Les réponses
+                déjà enregistrées ont été transmises au comité de recrutement.
+              </>
+            ) : (
+              <>
+                Merci <strong>{candidateName}</strong>. L&apos;ensemble de vos réponses pour l&apos;épreuve{" "}
+                <strong>{campaignTitle}</strong> a bien été enregistré avec succès.
+              </>
+            )}
           </p>
 
           <div
@@ -181,7 +341,8 @@ export function AssessmentClient({
               marginBottom: 10,
             }}
           >
-            L&apos;équipe RH examinera votre copie. Vous serez tenu(e) informé(e) de la suite donnée à votre candidature.
+            L&apos;équipe RH examinera votre copie. Vous serez tenu(e) informé(e) de la suite donnée à votre
+            candidature.
           </div>
         </div>
       </div>
@@ -204,8 +365,134 @@ export function AssessmentClient({
         flexDirection: "column",
         background: "#f4f6f8",
         fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif",
+        userSelect: "none",
+        WebkitUserSelect: "none",
       }}
     >
+      {/* ── TOAST ANTI-COPIE ──────────────────────────────────────────────── */}
+      {copyToast && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 24,
+            right: 24,
+            background: "#991b1b",
+            color: "#ffffff",
+            padding: "12px 20px",
+            borderRadius: 10,
+            boxShadow: "0 10px 25px rgba(0,0,0,0.3)",
+            fontSize: 13,
+            fontWeight: 700,
+            zIndex: 999999,
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+          }}
+        >
+          <AlertTriangle size={18} />
+          <span>{copyToast}</span>
+        </div>
+      )}
+
+      {/* ── MODALE D'ALERTE CHANGEMENT D'ONGLET (OPTION 2) ────────────────── */}
+      {showWarningModal && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15, 23, 42, 0.8)",
+            backdropFilter: "blur(6px)",
+            zIndex: 99999,
+            display: "grid",
+            placeItems: "center",
+            padding: 20,
+          }}
+        >
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: 16,
+              maxWidth: 520,
+              width: "100%",
+              padding: "32px 28px",
+              textAlign: "center",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.4)",
+              border: "2px solid #ef4444",
+            }}
+          >
+            <div
+              style={{
+                width: 60,
+                height: 60,
+                borderRadius: "50%",
+                background: "#fef2f2",
+                color: "#dc2626",
+                display: "grid",
+                placeItems: "center",
+                margin: "0 auto 16px",
+                border: "2px solid #fecaca",
+              }}
+            >
+              <AlertTriangle size={30} />
+            </div>
+
+            <h3 style={{ fontSize: 19, fontWeight: 800, color: "#991b1b", margin: "0 0 10px" }}>
+              Alerte Sécurité — Sortie d&apos;écran détectée !
+            </h3>
+
+            <p style={{ fontSize: 13, color: "#475569", lineHeight: 1.6, margin: "0 0 16px" }}>
+              Vous venez de quitter l&apos;onglet ou la fenêtre de composition de l&apos;épreuve. Cette action est{" "}
+              <strong>immédiatement consignée</strong> dans le journal d&apos;audit de recrutement MRS &amp; CORLAY.
+            </p>
+
+            <div
+              style={{
+                background: warningCount >= 3 ? "#fef2f2" : "#fff7ed",
+                border: `1.5px solid ${warningCount >= 3 ? "#fca5a5" : "#fed7aa"}`,
+                borderRadius: 10,
+                padding: "14px 18px",
+                marginBottom: 20,
+                fontSize: 13,
+                fontWeight: 700,
+                color: warningCount >= 3 ? "#b91c1c" : "#c2410c",
+                lineHeight: 1.5,
+              }}
+            >
+              {warningCount < 3 ? (
+                <span>
+                  Avertissement <strong>{warningCount}</strong> sur 3 autorisé(s). À la 4ème sortie, l&apos;épreuve
+                  sera <strong>automatiquement transmise et invalidée</strong>.
+                </span>
+              ) : (
+                <span>
+                  ⚠️ <strong>DERNIER AVERTISSEMENT (3/3) !</strong> Toute nouvelle sortie d&apos;écran entraînera la
+                  clôture et l&apos;invalidation immédiate de votre copie.
+                </span>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowWarningModal(false)}
+              style={{
+                background: "linear-gradient(135deg, #E06810 0%, #B44E09 100%)",
+                color: "#ffffff",
+                border: "none",
+                borderRadius: 10,
+                padding: "14px 24px",
+                fontSize: 14,
+                fontWeight: 800,
+                cursor: "pointer",
+                width: "100%",
+                boxShadow: "0 4px 14px rgba(224, 104, 16, 0.4)",
+              }}
+            >
+              Je confirme reprendre mon épreuve
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Barre supérieure fixe & statut */}
       <header
         style={{
@@ -230,7 +517,29 @@ export function AssessmentClient({
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          {/* Badge surveillance anti-triche */}
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              background: warningCount > 0 ? "#fef2f2" : "#f0fdf4",
+              color: warningCount > 0 ? "#dc2626" : "#166534",
+              border: `1px solid ${warningCount > 0 ? "#fecaca" : "#bbf7d0"}`,
+              padding: "5px 12px",
+              borderRadius: 8,
+              fontSize: 11,
+              fontWeight: 700,
+            }}
+            title="Protection anti-triche active : copie interdite et sorties d'écran surveillées"
+          >
+            {warningCount > 0 ? <ShieldAlert size={14} /> : <ShieldCheck size={14} />}
+            <span>
+              {warningCount === 0 ? "Protection anti-triche active" : `Sorties d'écran : ${warningCount}/3`}
+            </span>
+          </div>
+
           <div style={{ textAlign: "right" }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: "#1e293b" }}>{candidateName}</div>
             <div style={{ fontSize: 11, color: "#64748b" }}>Candidat(e) connecté(e)</div>
@@ -285,12 +594,9 @@ export function AssessmentClient({
             gap: 12,
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: "#64748b", marginRight: 6 }}>
-              QUESTIONS :
-            </span>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
             {questions.map((q, idx) => {
-              const answered = Boolean(answers[q.id]?.trim());
+              const answered = Boolean(answers[q.id] && answers[q.id].trim().length > 0);
               const isCurrent = idx === currentIndex;
               return (
                 <button
@@ -397,6 +703,8 @@ export function AssessmentClient({
                 marginBottom: 24,
                 fontWeight: 700,
                 color: "#1e293b",
+                userSelect: "none",
+                WebkitUserSelect: "none",
               }}
             >
               {currentQ.prompt}
@@ -433,6 +741,8 @@ export function AssessmentClient({
                     boxSizing: "border-box",
                     background: "#ffffff",
                     transition: "border-color 0.2s, box-shadow 0.2s",
+                    userSelect: "text",
+                    WebkitUserSelect: "text",
                   }}
                   placeholder="Rédigez clairement votre réponse ici..."
                   value={answers[currentQ.id] || ""}
@@ -483,6 +793,8 @@ export function AssessmentClient({
                     border: "1.5px solid #cbd5e1",
                     fontSize: 14,
                     outline: "none",
+                    userSelect: "text",
+                    WebkitUserSelect: "text",
                   }}
                   placeholder="Ex. 15000"
                   value={answers[currentQ.id] || ""}
@@ -518,6 +830,8 @@ export function AssessmentClient({
                           background: isChecked ? "#fff7ed" : "#ffffff",
                           cursor: "pointer",
                           transition: "all 0.15s ease",
+                          userSelect: "none",
+                          WebkitUserSelect: "none",
                         }}
                       >
                         <input

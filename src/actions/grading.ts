@@ -8,6 +8,7 @@ import {
   questionsTable,
   answersTable,
   gradesTable,
+  auditLogsTable,
 } from "@/db";
 import { eq, inArray, desc, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -83,6 +84,19 @@ export async function getAttemptForReview(attemptId: string) {
     };
   });
 
+  const proctoringLogs = await db
+    .select({ action: auditLogsTable.action })
+    .from(auditLogsTable)
+    .where(
+      and(
+        eq(auditLogsTable.entityType, "assessment"),
+        eq(auditLogsTable.entityId, attemptId)
+      )
+    );
+
+  const tabSwitches = proctoringLogs.filter((l) => l.action === "PROCTORING_TAB_SWITCH").length;
+  const copyAttempts = proctoringLogs.filter((l) => l.action === "PROCTORING_COPY_ATTEMPT").length;
+
   return {
     attemptId: attempt.id,
     candidateId: candidate?.id || "",
@@ -94,6 +108,10 @@ export async function getAttemptForReview(attemptId: string) {
     submittedAt: attempt.submittedAt?.toISOString() || "",
     validated: isValidated,
     questions: questionsWithReview,
+    proctoring: {
+      tabSwitches,
+      copyAttempts,
+    },
   };
 }
 

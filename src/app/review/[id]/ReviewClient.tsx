@@ -13,6 +13,8 @@ import {
   Zap,
   CheckCircle,
   XCircle,
+  ShieldCheck,
+  ShieldAlert,
 } from "lucide-react";
 
 interface QuestionReview {
@@ -41,6 +43,10 @@ interface ReviewClientProps {
   submittedAt: string;
   initialValidated: boolean;
   questions: QuestionReview[];
+  proctoring?: {
+    tabSwitches: number;
+    copyAttempts: number;
+  };
 }
 
 /** Types de questions corrigibles automatiquement */
@@ -82,6 +88,7 @@ export function ReviewClient({
   submittedAt,
   initialValidated,
   questions,
+  proctoring,
 }: ReviewClientProps) {
   const [grades, setGrades] = useState(
     questions.map((q) => ({
@@ -316,6 +323,35 @@ export function ReviewClient({
                   }}
                 >
                   <Zap size={12} /> {autoGradableCount} QCM auto-corrigé{autoGradableCount > 1 ? "s" : ""}
+                </span>
+              )}
+              {proctoring && (
+                <span
+                  style={{
+                    background: proctoring.tabSwitches > 0 || proctoring.copyAttempts > 0 ? "#fef2f2" : "#f0fdf4",
+                    color: proctoring.tabSwitches > 0 || proctoring.copyAttempts > 0 ? "#b91c1c" : "#15803d",
+                    border: `1px solid ${proctoring.tabSwitches > 0 || proctoring.copyAttempts > 0 ? "#fca5a5" : "#86efac"}`,
+                    padding: "3px 9px",
+                    borderRadius: 6,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4,
+                  }}
+                >
+                  {proctoring.tabSwitches > 0 || proctoring.copyAttempts > 0 ? (
+                    <>
+                      <ShieldAlert size={12} />
+                      {proctoring.tabSwitches > 0 && `${proctoring.tabSwitches} sortie(s) d'écran`}
+                      {proctoring.tabSwitches > 0 && proctoring.copyAttempts > 0 && " • "}
+                      {proctoring.copyAttempts > 0 && `${proctoring.copyAttempts} tentative(s) de copie`}
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck size={12} /> Intégrité respectée (0 sortie)
+                    </>
+                  )}
                 </span>
               )}
             </div>

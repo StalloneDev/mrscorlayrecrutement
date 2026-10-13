@@ -295,7 +295,7 @@ export async function saveCandidateAnswerAction(attemptId: string, questionId: s
   return { success: true, savedAt: now.toISOString() };
 }
 
-export async function submitAssessmentAction(attemptId: string) {
+export async function submitAssessmentAction(attemptId: string, customSubmissionType?: string) {
   const [attempt] = await db
     .select()
     .from(assessmentAttemptsTable)
@@ -307,8 +307,12 @@ export async function submitAssessmentAction(attemptId: string) {
 
   const now = new Date();
   const isTimeOut = now.getTime() > attempt.deadlineAt.getTime();
-  const submissionType = isTimeOut ? "automatic" : "voluntary";
-  const candidateStatus = isTimeOut ? "submitted_automatically" : "submitted";
+  const submissionType = customSubmissionType || (isTimeOut ? "automatic" : "voluntary");
+  const candidateStatus = customSubmissionType === "proctoring_violation"
+    ? "submitted_violation"
+    : isTimeOut
+    ? "submitted_automatically"
+    : "submitted";
 
   await db
     .update(assessmentAttemptsTable)
@@ -424,3 +428,32 @@ export async function submitAssessmentAction(attemptId: string) {
 
   return { success: true, submissionType, submittedAt: now.toISOString() };
 }
+
+export async function recordProctoringEventAction(
+  attemptId: string,
+  eventType: "TAB_SWITCH" | "COPY_ATTEMPT" | "DEVTOOLS_ATTEMPT",
+  detail?: Record<string, unknown>
+) {
+  const [attempt] = await db
+    .select({ campaignId: assessmentAttemptsTable.campaignId, candidateId: assessmentAttemptsTable.candidateId })
+    .from(assessmentAttemptsTable)
+    .where(eq(assessmentAttemptsTable.id, attemptId))
+    .limit(1);
+
+  if (!attempt) return { error: "Tentative introuvable." };
+
+  await logAuditEvent({
+    companyId: null,
+    action: `PROCTORING_${eventType}`,
+    entityType: "assessment",
+    entityId: attemptId,
+    detail: {
+      candidateId: attempt.candidateId,
+      campaignId: attempt.campaignId,
+      ...detail,
+    },
+  });
+
+  return { success: true };
+}
+

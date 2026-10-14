@@ -5,6 +5,7 @@ import { CandidateRowActions } from "@/components/CandidateRowActions";
 import { InviteCandidatesButton } from "@/components/InviteCandidatesButton";
 import { EditCampaignButton } from "@/components/EditCampaignButton";
 import { ImportCSVButton } from "@/components/ImportCSVButton";
+import { CampaignQuestionsSelector } from "@/components/CampaignQuestionsSelector";
 import { getCampaignById, updateCampaignStatusAction, updateCampaignQuestionsAction } from "@/actions/campaigns";
 import { getQuestions } from "@/actions/questions";
 import { getCandidatesByCampaign, addCandidateAction, generateInvitationsAction } from "@/actions/candidates";
@@ -299,52 +300,21 @@ export default async function CampaignDetailPage({
 
           {/* Onglet 2 : COMPOSITION DE L'ÉPREUVE */}
           {tab === "questions" && (
-            <div className="panel">
-              <h2 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 10px" }}>Sélection des questions pour cette épreuve</h2>
-              <p style={{ fontSize: 13, color: "#647486", margin: "0 0 20px" }}>
-                Cochez les questions du référentiel à inclure dans le test. Le barème total et le temps s'ajustent pour le candidat.
-              </p>
+            <div className="panel" style={{ padding: "24px 20px" }}>
+              <div style={{ marginBottom: 20 }}>
+                <h2 style={{ fontSize: 17, fontWeight: 700, margin: "0 0 6px", color: "#1e293b" }}>
+                  Composition de l&apos;épreuve &amp; Sélection des questions
+                </h2>
+                <p style={{ fontSize: 13, color: "#64748b", margin: 0 }}>
+                  Filtrez rapidement par <strong>Compétence évaluée</strong> ou mot-clé, cochez les questions du référentiel et enregistrez la composition de votre test.
+                </p>
+              </div>
 
-              <form action={handleQuestionSelection}>
-                <div style={{ display: "grid", gap: 10, marginBottom: 20 }}>
-                  {allQuestions.map((q) => {
-                    const isChecked = campaign.questionIds.includes(q.id);
-                    return (
-                      <label
-                        key={q.id}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 12,
-                          padding: "12px 16px",
-                          borderRadius: 8,
-                          border: isChecked ? "1px solid #1d725e" : "1px solid #e0e5e2",
-                          background: isChecked ? "#f4f9f6" : "white",
-                          cursor: "pointer",
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          name="questionIds"
-                          value={q.id}
-                          defaultChecked={isChecked}
-                          style={{ width: 17, height: 17, accentColor: "#1d725e" }}
-                        />
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 600, fontSize: 13, color: "#2c3d4d" }}>{q.prompt}</div>
-                          <div style={{ fontSize: 11, color: "#8d979c" }}>
-                            {q.category} • {q.competency} • {q.points} pts
-                          </div>
-                        </div>
-                      </label>
-                    );
-                  })}
-                </div>
-
-                <button type="submit" className="btn btn-primary">
-                  Enregistrer la composition de l'épreuve
-                </button>
-              </form>
+              <CampaignQuestionsSelector
+                campaignId={campaign.id}
+                initialQuestionIds={campaign.questionIds || []}
+                allQuestions={allQuestions}
+              />
             </div>
           )}
 

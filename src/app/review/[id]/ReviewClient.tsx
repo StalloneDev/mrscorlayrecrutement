@@ -131,7 +131,7 @@ export function ReviewClient({
         if (validate) {
           setIsValidated(true);
           setMessage({
-            text: "✓ Évaluation officiellement validée ! Le score global a été calculé et synchronisé.",
+            text: "✓ Évaluation officiellement validée ! Le score global a été calculé, synchronisé et l'e-mail de résultat envoyé au candidat.",
             type: "success",
           });
         } else {

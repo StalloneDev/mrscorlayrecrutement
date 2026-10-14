@@ -347,29 +347,8 @@ export async function autoGradeAttemptAction(attemptId: string) {
       });
   }
 
-  // Si 100% QCM → valider automatiquement et mettre à jour le score candidat
-  if (manualRequired.length === 0 && autoGraded.length > 0) {
-    const totalPoints = rawQuestions.reduce((sum, q) => sum + q.points, 0);
-    const earnedPoints = autoGraded.reduce((sum, g) => sum + g.score, 0);
-    const percentageScore = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
-
-    for (const grade of autoGraded) {
-      await db
-        .update(gradesTable)
-        .set({ validated: true, updatedAt: now })
-        .where(
-          and(
-            eq(gradesTable.attemptId, attemptId),
-            eq(gradesTable.questionId, grade.questionId)
-          )
-        );
-    }
-
-    await db
-      .update(candidatesTable)
-      .set({ score: percentageScore, status: "reviewed", updatedAt: now })
-      .where(eq(candidatesTable.id, attempt.candidateId));
-  }
+  // Les notes auto-générées restent non validées (validated: false)
+  // pour permettre à l'évaluateur de les inspecter et de valider manuellement.
 
   await logAuditEvent({
     companyId: null,

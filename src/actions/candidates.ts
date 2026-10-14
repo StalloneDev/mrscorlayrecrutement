@@ -126,7 +126,7 @@ export async function generateInvitationsAction(campaignId: string, candidateIds
     if (!tokenHash) continue;
 
     const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 14); // 14 jours de validité
+    expiresAt.setHours(expiresAt.getHours() + 24); // 24 heures de validité
 
     await db.insert(invitationsTable).values({
       candidateId,
@@ -151,7 +151,7 @@ export async function generateInvitationsAction(campaignId: string, candidateIds
         candidateName,
         campaignTitle,
         invitationUrl,
-        expiresInDays: 14,
+        expiresInDays: 1,
       });
       emailSuccess = emailRes?.success ?? true;
     } catch (err) {
@@ -322,7 +322,7 @@ export async function resendInvitationAction(candidateId: string, campaignId: st
   if (!newHash) return { error: "Erreur de génération du token." };
 
   const newExpiresAt = new Date();
-  newExpiresAt.setDate(newExpiresAt.getDate() + 14);
+  newExpiresAt.setHours(newExpiresAt.getHours() + 24);
 
   await db
     .update(invitationsTable)
@@ -351,7 +351,7 @@ export async function resendInvitationAction(candidateId: string, campaignId: st
       candidateName,
       campaignTitle: campaign?.title || "Campagne de Recrutement",
       invitationUrl,
-      expiresInDays: 14,
+      expiresInDays: 1,
     });
     emailSent = emailRes?.success ?? true;
   } catch (err) {

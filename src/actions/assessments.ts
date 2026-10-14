@@ -379,38 +379,16 @@ export async function submitAssessmentAction(attemptId: string, customSubmission
           });
       }
 
-      // Si TOUS les QCM (aucune question manuelle), valider et calculer le score directement
-      if (manualRequired.length === 0 && autoGraded.length > 0) {
-        const totalPoints = rawQuestions.reduce((sum, q) => sum + q.points, 0);
-        const earnedPoints = autoGraded.reduce((sum, g) => sum + g.score, 0);
-        const percentageScore = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
-
-        // Valider les notes automatiquement
-        for (const grade of autoGraded) {
-          await db
-            .update(gradesTable)
-            .set({ validated: true, updatedAt: now })
-            .where(
-              and(
-                eq(gradesTable.attemptId, attemptId),
-                eq(gradesTable.questionId, grade.questionId)
-              )
-            );
-        }
-
-        await db
-          .update(candidatesTable)
-          .set({ score: percentageScore, status: "reviewed", updatedAt: now })
-          .where(eq(candidatesTable.id, attempt.candidateId));
-
-        await logAuditEvent({
-          companyId: null,
-          action: "ASSESSMENT_AUTO_GRADED",
-          entityType: "assessment",
-          entityId: attemptId,
-          detail: { percentageScore, autoGradedCount: autoGraded.length },
-        });
-      }
+      // Les notes automatiques sont enregistrées avec validated: false.
+      // La validation définitive et l'envoi de l'e-mail de résultat nécessitent
+      // une vérification et validation manuelle par l'évaluateur RH.
+      await logAuditEvent({
+        companyId: null,
+        action: "ASSESSMENT_AUTO_PREGRADED",
+        entityType: "assessment",
+        entityId: attemptId,
+        detail: { autoGradedCount: autoGraded.length, manualRequired: manualRequired.length },
+      });
     }
   } catch (err) {
     console.error("[AutoGrade] Erreur lors de la correction automatique :", err);

@@ -35,7 +35,7 @@ export interface SendInvitationEmailParams {
   candidateName: string;
   campaignTitle: string;
   invitationUrl: string;
-  expiresInDays?: number;
+  expiresInDays?: number; // conservé pour compatibilité, converti en heures si fourni
 }
 
 export async function sendInvitationEmail({
@@ -43,7 +43,7 @@ export async function sendInvitationEmail({
   candidateName,
   campaignTitle,
   invitationUrl,
-  expiresInDays = 14,
+  expiresInDays = 1,
 }: SendInvitationEmailParams) {
   const host = process.env.SMTP_HOST;
   const port = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 587;
@@ -133,7 +133,7 @@ export async function sendInvitationEmail({
               <li>Installez-vous dans un endroit calme avec une <strong>connexion internet stable</strong>.</li>
               <li>Le chronomètre se déclenchera dès la confirmation de votre identité.</li>
               <li>Toute sortie de page ou tentative de triche sera journalisée.</li>
-              <li>Ce lien d'accès personnel restera valide pendant <strong>${expiresInDays} jours</strong>.</li>
+              <li>Ce lien d'accès personnel restera valide pendant <strong>24 heures</strong>.</li>
             </ul>
           </div>
 
@@ -175,7 +175,7 @@ ${invitationUrl}
 Consignes :
 - Assurez-vous de disposer d'une connexion internet stable.
 - Le chronomètre se déclenche dès votre confirmation d'identité.
-- Ce lien est personnel et restera accessible pendant ${expiresInDays} jours.
+- Ce lien est personnel et restera accessible pendant 24 heures.
 
 Nous vous souhaitons un excellent passage d'épreuve.
 

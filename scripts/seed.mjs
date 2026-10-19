@@ -17,7 +17,8 @@ async function seed() {
     INSERT INTO companies (name, code, accent_color)
     VALUES 
       ('MRS', 'MRS', '#176b62'),
-      ('CORLAY', 'CORLAY', '#c47a35')
+      ('CORLAY', 'CORLAY', '#c47a35'),
+      ('MRS/CORLAY', 'MRS_CORLAY', '#e06810')
     ON CONFLICT (code) DO NOTHING;
   `);
 

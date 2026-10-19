@@ -357,3 +357,151 @@ Le Comité de Recrutement MRS & CORLAY`;
     return { success: false, simulated: false, error: msg };
   }
 }
+
+export interface SendApplicationConfirmationEmailParams {
+  to: string;
+  candidateName: string;
+  jobTitle: string;
+  companyLabel: string;
+}
+
+export async function sendApplicationConfirmationEmail({
+  to,
+  candidateName,
+  jobTitle,
+  companyLabel,
+}: SendApplicationConfirmationEmailParams) {
+  const host = process.env.SMTP_HOST;
+  const port = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 587;
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+
+  let senderName = "MRS & CORLAY Recrutement";
+  if (process.env.SMTP_FROM) {
+    const cleaned = process.env.SMTP_FROM.replace(/\\"/g, '"').replace(/^"/, "").replace(/"$/, "");
+    const nameMatch = cleaned.match(/^"?([^<"]+)"?\s*</);
+    if (nameMatch && nameMatch[1]) {
+      senderName = nameMatch[1].trim();
+    }
+  }
+
+  const fromSender = {
+    name: senderName,
+    address: user || "lodouiran@mrsholdings.com",
+  };
+
+  if (!host || !user || !pass) {
+    console.log(`[Email Simulation] Candidature reçue pour ${to} (${candidateName}) pour le poste "${jobTitle}" chez ${companyLabel}`);
+    return {
+      success: true,
+      simulated: true,
+      message: "SMTP non configuré dans .env : envoi simulé en console.",
+    };
+  }
+
+  const transporter = nodemailer.createTransport({
+    host,
+    port,
+    secure: port === 465,
+    auth: {
+      user,
+      pass,
+    },
+    tls: {
+      rejectUnauthorized: false,
+    },
+  });
+
+  const { src: logoSrc, attachments } = getLogoConfig();
+
+  const html = `
+    <!DOCTYPE html>
+    <html lang="fr">
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; margin: 0; padding: 24px; color: #1e293b; }
+        .card { max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; }
+        .header { background: linear-gradient(135deg, #E06810 0%, #B44E09 100%); padding: 32px 24px 24px; text-align: center; color: #ffffff; }
+        .header h1 { margin: 0 0 4px; font-size: 20px; font-weight: 800; letter-spacing: -0.01em; }
+        .header p { margin: 0; font-size: 13px; opacity: 0.9; }
+        .content { padding: 32px 28px; }
+        .greeting { font-size: 17px; font-weight: 700; color: #0f172a; margin-bottom: 16px; }
+        .lead { font-size: 14px; color: #334155; margin-bottom: 20px; line-height: 1.6; }
+        .info-card { background: #f8fafc; border-left: 4px solid #E06810; border-radius: 6px; padding: 16px 20px; margin: 24px 0; }
+        .info-title { font-weight: 700; color: #0f172a; font-size: 14px; margin-bottom: 6px; }
+        .footer { background: #f8fafc; padding: 20px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; }
+      </style>
+    </head>
+    <body>
+      <div class="card">
+        <div class="header">
+          <img src="${logoSrc}" alt="MRS &amp; CORLAY" width="68" height="68" style="border-radius: 12px; margin-bottom: 12px; display: block; margin-left: auto; margin-right: auto;" />
+          <h1>MRS &amp; CORLAY HOLDINGS</h1>
+          <p>Direction des Ressources Humaines</p>
+        </div>
+        
+        <div class="content">
+          <div class="greeting">Bonjour ${candidateName},</div>
+          
+          <p class="lead">
+            Nous accusons bonne réception de votre dossier de candidature pour le poste :<br/>
+            <strong style="color: #E06810; font-size: 16px;">« ${jobTitle} »</strong><br/>
+            au sein de l'entité <strong>${companyLabel}</strong>.
+          </p>
+
+          <div class="info-card">
+            <div class="info-title">📋 Statut de votre démarche :</div>
+            <p style="margin: 0; font-size: 13px; color: #475569; line-height: 1.5;">
+              Votre Curriculum Vitae ainsi que vos pièces jointes ont été enregistrés avec succès dans notre système de recrutement.
+            </p>
+          </div>
+
+          <p style="font-size: 13px; color: #475569; line-height: 1.6;">
+            Notre équipe examinera attentivement votre profil au regard des compétences requises pour ce poste. Si votre candidature est retenue, vous serez contacté(e) pour participer aux épreuves d'évaluation technique ou à un entretien.
+          </p>
+
+          <p style="font-size: 13px; color: #475569; margin-top: 24px;">
+            Nous vous remercions vivement de l'intérêt que vous portez à notre Groupe.<br/>
+            Bien cordialement,<br/>
+            <strong>Le Département Recrutement MRS &amp; CORLAY</strong>
+          </p>
+        </div>
+
+        <div class="footer">
+          MRS &amp; CORLAY Holdings · Espace Recrutement &amp; Carrières · Cet email est envoyé automatiquement, merci de ne pas y répondre directement.
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const text = `Bonjour ${candidateName},
+
+Nous accusons bonne réception de votre dossier de candidature pour le poste : "${jobTitle}" (${companyLabel}).
+
+Votre Curriculum Vitae et vos éléments transmis ont bien été enregistrés dans notre système.
+Notre équipe RH examinera votre profil avec attention. Si votre profil correspond aux attentes, vous serez contacté(e) pour les prochaines étapes.
+
+Nous vous remercions de l'intérêt que vous portez à MRS & CORLAY.
+
+Bien cordialement,
+Le Département Recrutement MRS & CORLAY`;
+
+  try {
+    const info = await transporter.sendMail({
+      from: fromSender,
+      to,
+      subject: `Accusé de réception de votre candidature — ${jobTitle}`,
+      text,
+      html,
+      attachments,
+    });
+    return { success: true, simulated: false, messageId: info.messageId };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Erreur d'envoi SMTP";
+    console.error(`[SMTP ERROR] Échec envoi accusé de réception à ${to}:`, msg);
+    return { success: false, simulated: false, error: msg };
+  }
+}
+

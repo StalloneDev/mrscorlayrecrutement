@@ -12,6 +12,7 @@ import {
   FileSpreadsheet,
   LogOut,
   Settings,
+  Megaphone,
 } from "lucide-react";
 import { logoutAction } from "@/actions/auth";
 
@@ -20,6 +21,7 @@ export function Sidebar() {
 
   const links = [
     { href: "/dashboard", label: "Vue d'ensemble", icon: LayoutDashboard },
+    { href: "/job-offers", label: "Offres d'emploi", icon: Megaphone },
     { href: "/campaigns", label: "Campagnes", icon: BriefcaseBusiness },
     { href: "/composition", label: "Composition épreuves", icon: FileSpreadsheet },
     { href: "/candidates", label: "Candidats", icon: Users },

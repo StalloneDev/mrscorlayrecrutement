@@ -216,3 +216,55 @@ export const auditLogsTable = pgTable(
   },
   (table) => [index("audit_logs_company_time_idx").on(table.companyId, table.createdAt)],
 );
+
+export const jobOffersTable = pgTable(
+  "job_offers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    companyLabel: text("company_label").notNull().default("MRS/CORLAY"),
+    title: text("title").notNull(),
+    reference: text("reference"),
+    location: text("location").notNull().default("Abidjan, Côte d'Ivoire"),
+    contractType: text("contract_type").notNull().default("CDI"),
+    description: text("description").notNull().default(""),
+    requirements: text("requirements").notNull().default(""),
+    closingDate: timestamp("closing_date", { withTimezone: true }),
+    publicToken: text("public_token").notNull().unique(),
+    status: text("status").notNull().default("active"),
+    ...timestamps,
+  },
+  (table) => [
+    index("job_offers_status_idx").on(table.status),
+    uniqueIndex("job_offers_token_idx").on(table.publicToken),
+  ],
+);
+
+export const jobApplicationsTable = pgTable(
+  "job_applications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    jobOfferId: uuid("job_offer_id")
+      .notNull()
+      .references(() => jobOffersTable.id, { onDelete: "cascade" }),
+    firstName: text("first_name").notNull(),
+    lastName: text("last_name").notNull(),
+    email: text("email").notNull(),
+    phone: text("phone"),
+    country: text("country"),
+    cvUrl: text("cv_url").notNull(),
+    cvFileName: text("cv_file_name"),
+    coverLetterUrl: text("cover_letter_url"),
+    coverLetterFileName: text("cover_letter_file_name"),
+    coverLetterText: text("cover_letter_text"),
+    aiScore: integer("ai_score"),
+    aiKeywordsMatched: jsonb("ai_keywords_matched").$type<string[]>().notNull().default([]),
+    aiSummary: text("ai_summary"),
+    status: text("status").notNull().default("new"),
+    submittedAt: timestamp("submitted_at", { withTimezone: true }).notNull().defaultNow(),
+    ...timestamps,
+  },
+  (table) => [
+    index("job_applications_offer_idx").on(table.jobOfferId),
+    index("job_applications_status_idx").on(table.status),
+  ],
+);

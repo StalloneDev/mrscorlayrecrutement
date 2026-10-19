@@ -1,5 +1,5 @@
 // @ts-ignore
-import pdfParse from "pdf-parse";
+import { PDFParse } from "pdf-parse";
 
 // Mots d'arrêt (stopwords) courants en français à ignorer dans l'analyse
 const STOP_WORDS = new Set([
@@ -64,15 +64,28 @@ export async function extractCvText(cvUrl: string): Promise<string> {
       buffer = Buffer.from(arrayBuffer);
     }
 
-    // Extraction PDF
+    // Extraction PDF via PDFParse
     try {
-      const parsed = await pdfParse(buffer);
-      if (parsed && parsed.text && parsed.text.trim().length > 0) {
-        return parsed.text;
+      if (typeof PDFParse === "function") {
+        const parser: any = new PDFParse({ data: buffer });
+        const parsed: any = await parser.getText();
+        if (parsed) {
+          if (typeof parsed === "string" && parsed.trim().length > 0) {
+            return parsed;
+          }
+          if (parsed.text && typeof parsed.text === "string" && parsed.text.trim().length > 0) {
+            return parsed.text;
+          }
+          if (Array.isArray(parsed.pages)) {
+            const fullText = parsed.pages
+              .map((p: any) => (typeof p === "string" ? p : p?.text || ""))
+              .join("\n");
+            if (fullText.trim().length > 0) return fullText;
+          }
+        }
       }
-    } catch {
-      // Si ce n'est pas un PDF ou échec du parser PDF, lecture brute textuelle
-      return buffer.toString("utf-8");
+    } catch (pdfErr) {
+      console.warn("[CvScoring] Lecture PDF en fallback texte :", pdfErr);
     }
 
     return buffer.toString("utf-8");

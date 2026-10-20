@@ -1,5 +1,4 @@
-// @ts-ignore
-import { PDFParse } from "pdf-parse";
+import { getDocumentProxy, extractText } from "unpdf";
 
 // Mots d'arrêt (stopwords) courants en français à ignorer dans l'analyse
 const STOP_WORDS = new Set([
@@ -48,47 +47,35 @@ export function extractKeywords(requirementsText: string): string[] {
  */
 export async function extractCvText(cvUrl: string): Promise<string> {
   try {
-    let buffer: Buffer;
+    let uint8Array: Uint8Array;
 
     if (cvUrl.startsWith("data:")) {
       const base64Index = cvUrl.indexOf(";base64,");
       if (base64Index !== -1) {
         const base64Content = cvUrl.slice(base64Index + 8);
-        buffer = Buffer.from(base64Content, "base64");
+        const buf = Buffer.from(base64Content, "base64");
+        uint8Array = new Uint8Array(buf);
       } else {
         return "";
       }
     } else {
       const response = await fetch(cvUrl);
       const arrayBuffer = await response.arrayBuffer();
-      buffer = Buffer.from(arrayBuffer);
+      uint8Array = new Uint8Array(arrayBuffer);
     }
 
-    // Extraction PDF via PDFParse
+    // Extraction PDF via unpdf (100% compatible serverless Vercel, sans dépendances natives)
     try {
-      if (typeof PDFParse === "function") {
-        const parser: any = new PDFParse({ data: buffer });
-        const parsed: any = await parser.getText();
-        if (parsed) {
-          if (typeof parsed === "string" && parsed.trim().length > 0) {
-            return parsed;
-          }
-          if (parsed.text && typeof parsed.text === "string" && parsed.text.trim().length > 0) {
-            return parsed.text;
-          }
-          if (Array.isArray(parsed.pages)) {
-            const fullText = parsed.pages
-              .map((p: any) => (typeof p === "string" ? p : p?.text || ""))
-              .join("\n");
-            if (fullText.trim().length > 0) return fullText;
-          }
-        }
+      const pdf = await getDocumentProxy(uint8Array);
+      const { text } = await extractText(pdf, { mergePages: true });
+      if (text && typeof text === "string" && text.trim().length > 0) {
+        return text;
       }
     } catch (pdfErr) {
-      console.warn("[CvScoring] Lecture PDF en fallback texte :", pdfErr);
+      console.warn("[CvScoring] Lecture PDF unpdf en fallback texte :", pdfErr);
     }
 
-    return buffer.toString("utf-8");
+    return Buffer.from(uint8Array).toString("utf-8");
   } catch (err) {
     console.error("[CvScoring] Erreur lecture CV :", err);
     return "";

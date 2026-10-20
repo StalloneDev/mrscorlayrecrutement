@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import Link from "next/link";
 import {
   Megaphone,
@@ -34,18 +34,35 @@ interface JobOffer {
   contractType: string;
   description: string;
   requirements: string;
-  closingDate: Date | null;
+  closingDate: Date | string | null;
   publicToken: string;
   status: string;
-  createdAt: Date;
+  createdAt: Date | string;
   applicantsCount: number;
 }
 
+function formatDate(d: any): string {
+  if (!d) return "";
+  try {
+    const date = new Date(d);
+    return isNaN(date.getTime()) ? "" : date.toLocaleDateString("fr-FR");
+  } catch {
+    return "";
+  }
+}
+
 export function JobOffersClient({ initialOffers }: { initialOffers: JobOffer[] }) {
-  const [offers, setOffers] = useState(initialOffers);
+  const [offers, setOffers] = useState<JobOffer[]>(initialOffers || []);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [origin, setOrigin] = useState<string>("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setOrigin(window.location.origin);
+    }
+  }, []);
 
   // Formulaire nouvelle offre
   const [title, setTitle] = useState("");
@@ -58,10 +75,8 @@ export function JobOffersClient({ initialOffers }: { initialOffers: JobOffer[] }
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const getPublicUrl = (token: string) => {
-    if (typeof window !== "undefined") {
-      return `${window.location.origin}/apply/${token}`;
-    }
-    return `https://mrscorlayrecrutement.vercel.app/apply/${token}`;
+    const base = origin || "https://mrscorlayrecrutement.vercel.app";
+    return `${base}/apply/${token}`;
   };
 
   const handleCopyLink = (token: string, id: string) => {
@@ -282,7 +297,7 @@ export function JobOffersClient({ initialOffers }: { initialOffers: JobOffer[] }
                       </span>
                       {offer.closingDate && (
                         <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                          <Calendar size={14} color="#E06810" /> Clôture le {new Date(offer.closingDate).toLocaleDateString("fr-FR")}
+                          <Calendar size={14} color="#E06810" /> <span suppressHydrationWarning>Clôture le {formatDate(offer.closingDate)}</span>
                         </span>
                       )}
                     </div>
@@ -291,6 +306,7 @@ export function JobOffersClient({ initialOffers }: { initialOffers: JobOffer[] }
                   {/* Bouton Voir candidatures */}
                   <Link
                     href={`/job-offers/${offer.id}/applicants`}
+                    prefetch={false}
                     className="btn btn-primary"
                     style={{
                       display: "inline-flex",
@@ -301,7 +317,7 @@ export function JobOffersClient({ initialOffers }: { initialOffers: JobOffer[] }
                     }}
                   >
                     <Users size={15} />
-                    <span>Voir les candidatures ({offer.applicantsCount})</span>
+                    <span>Voir les candidatures ({offer.applicantsCount ?? 0})</span>
                   </Link>
                 </div>
 
@@ -323,7 +339,7 @@ export function JobOffersClient({ initialOffers }: { initialOffers: JobOffer[] }
                     <Share2 size={16} color="#E06810" style={{ flexShrink: 0 }} />
                     <div style={{ fontSize: 12, color: "#334155" }}>
                       <span style={{ fontWeight: 600 }}>Lien public de candidature :</span>{" "}
-                      <span style={{ color: "#E06810", wordBreak: "break-all" }}>{publicUrl}</span>
+                      <span suppressHydrationWarning style={{ color: "#E06810", wordBreak: "break-all" }}>{publicUrl}</span>
                     </div>
                   </div>
 

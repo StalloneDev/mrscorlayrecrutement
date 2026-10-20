@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifySession } from '@/lib/auth';
 
-const PUBLIC_ROUTES = ['/', '/login', '/invitation', '/assessment'];
+const PUBLIC_ROUTES = ['/', '/login', '/invitation', '/assessment', '/apply'];
 
 function isPublic(pathname: string) {
   return PUBLIC_ROUTES.some((p) => pathname === p || pathname.startsWith(p + '/'));

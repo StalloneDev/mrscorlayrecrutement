@@ -141,7 +141,7 @@ export default async function ApplyPage({ params }: Props) {
               <MapPin size={15} /> {offer.location}
             </span>
             {offer.closingDate && (
-              <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 5 }} suppressHydrationWarning>
                 <Calendar size={15} /> Date limite : {new Date(offer.closingDate).toLocaleDateString("fr-FR")}
               </span>
             )}

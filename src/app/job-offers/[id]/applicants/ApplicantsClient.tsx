@@ -34,7 +34,7 @@ interface JobOffer {
   contractType: string;
   description: string;
   requirements: string;
-  closingDate: Date | null;
+  closingDate: Date | string | null;
   publicToken: string;
   status: string;
 }
@@ -56,7 +56,17 @@ interface Application {
   aiKeywordsMatched: string[];
   aiSummary: string | null;
   status: string;
-  submittedAt: Date;
+  submittedAt: Date | string;
+}
+
+function formatDate(d: any): string {
+  if (!d) return "";
+  try {
+    const date = new Date(d);
+    return isNaN(date.getTime()) ? "" : date.toLocaleDateString("fr-FR");
+  } catch {
+    return "";
+  }
 }
 
 export function ApplicantsClient({
@@ -66,7 +76,7 @@ export function ApplicantsClient({
   offer: JobOffer;
   initialApplications: Application[];
 }) {
-  const [applications, setApplications] = useState<Application[]>(initialApplications);
+  const [applications, setApplications] = useState<Application[]>(initialApplications || []);
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
   const [isPending, startTransition] = useTransition();
   const [isScoring, setIsScoring] = useState(false);
@@ -111,22 +121,24 @@ export function ApplicantsClient({
     });
   };
 
+  const safeApps = applications || [];
+
   // Filtrage
-  const filteredApps = applications.filter((app) => {
+  const filteredApps = safeApps.filter((app) => {
     if (filterStatus === "ALL") return true;
     if (filterStatus === "SHORTLISTED") return app.status === "shortlisted" || (app.aiScore !== null && app.aiScore >= 70);
     return app.status === filterStatus;
   });
 
   // Statistiques
-  const totalCount = applications.length;
-  const shortlistedCount = applications.filter(
+  const totalCount = safeApps.length;
+  const shortlistedCount = safeApps.filter(
     (a) => a.status === "shortlisted" || (a.aiScore !== null && a.aiScore >= 70)
   ).length;
   const averageScore =
     totalCount > 0
       ? Math.round(
-          applications.reduce((acc, a) => acc + (a.aiScore || 0), 0) / totalCount
+          safeApps.reduce((acc, a) => acc + (a.aiScore || 0), 0) / totalCount
         )
       : 0;
 
@@ -279,9 +291,9 @@ export function ApplicantsClient({
         {[
           { key: "ALL", label: `Toutes (${totalCount})` },
           { key: "SHORTLISTED", label: `⭐ Présélectionnés IA (${shortlistedCount})` },
-          { key: "new", label: `Nouveaux (${applications.filter((a) => a.status === "new").length})` },
-          { key: "reviewing", label: `En étude (${applications.filter((a) => a.status === "reviewing").length})` },
-          { key: "rejected", label: `Non retenus (${applications.filter((a) => a.status === "rejected").length})` },
+          { key: "new", label: `Nouveaux (${safeApps.filter((a) => a.status === "new").length})` },
+          { key: "reviewing", label: `En étude (${safeApps.filter((a) => a.status === "reviewing").length})` },
+          { key: "rejected", label: `Non retenus (${safeApps.filter((a) => a.status === "rejected").length})` },
         ].map((tab) => {
           const isActive = filterStatus === tab.key;
           return (
@@ -390,7 +402,7 @@ export function ApplicantsClient({
                         </span>
                       )}
                       <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                        <Calendar size={13} /> {new Date(app.submittedAt).toLocaleDateString("fr-FR")}
+                        <Calendar size={13} /> <span suppressHydrationWarning>{formatDate(app.submittedAt)}</span>
                       </span>
                     </div>
                   </div>
@@ -440,7 +452,7 @@ export function ApplicantsClient({
                     </div>
                     <p style={{ margin: 0, lineHeight: 1.5 }}>{app.aiSummary}</p>
 
-                    {app.aiKeywordsMatched && app.aiKeywordsMatched.length > 0 && (
+                    {Array.isArray(app.aiKeywordsMatched) && app.aiKeywordsMatched.length > 0 && (
                       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
                         {app.aiKeywordsMatched.map((kw, i) => (
                           <span

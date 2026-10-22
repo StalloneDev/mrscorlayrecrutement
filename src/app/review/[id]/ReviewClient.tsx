@@ -639,9 +639,23 @@ export function ReviewClient({
 
               {/* Contenu et copie */}
               <div style={{ padding: "22px 24px" }}>
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#1e293b", margin: "0 0 16px", lineHeight: 1.5 }}>
+                <div
+                  style={{
+                    fontSize: 15,
+                    fontWeight: 600,
+                    color: "#1e293b",
+                    margin: "0 0 18px",
+                    lineHeight: 1.7,
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                    background: "#f8fafc",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: 10,
+                    padding: "16px 20px",
+                  }}
+                >
                   {q.prompt}
-                </h3>
+                </div>
 
                 {/* Réponse attendue */}
                 {q.expectedAnswer && (
@@ -650,20 +664,20 @@ export function ReviewClient({
                       background: "#fffaf0",
                       border: "1px dashed #fed7aa",
                       borderRadius: 8,
-                      padding: "12px 16px",
+                      padding: "14px 18px",
                       marginBottom: 16,
-                      fontSize: 12,
+                      fontSize: 13,
                       color: "#9a3412",
-                      lineHeight: 1.5,
+                      lineHeight: 1.7,
                     }}
                   >
-                    <strong style={{ display: "block", marginBottom: 2 }}>
+                    <strong style={{ display: "block", marginBottom: 6 }}>
                       💡{" "}
                       {isAutoGradable
                         ? "Réponse correcte (auto-correction) :"
                         : "Critères / Réponse attendue (confidentiel RH) :"}
                     </strong>
-                    <div>{q.expectedAnswer}</div>
+                    <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{q.expectedAnswer}</div>
                   </div>
                 )}
 

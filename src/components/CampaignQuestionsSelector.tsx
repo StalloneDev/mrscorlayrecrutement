@@ -457,8 +457,10 @@ export function CampaignQuestionsSelector({
                       fontWeight: 700,
                       fontSize: 14,
                       color: isChecked ? "#1e293b" : "#334155",
-                      lineHeight: 1.5,
+                      lineHeight: 1.6,
                       marginBottom: 8,
+                      whiteSpace: "pre-wrap",
+                      wordBreak: "break-word",
                     }}
                   >
                     {q.prompt}

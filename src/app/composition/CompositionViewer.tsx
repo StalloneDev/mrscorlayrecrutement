@@ -283,9 +283,9 @@ export function CompositionViewer({ campaigns }: { campaigns: CampaignCompositio
                       </span>
                     </div>
 
-                    <h4 style={{ fontSize: 16, fontWeight: 700, color: "#1e2f3e", margin: "0 0 18px", lineHeight: 1.5 }}>
+                    <div style={{ fontSize: 15, fontWeight: 600, color: "#1e2f3e", margin: "0 0 18px", lineHeight: 1.7, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
                       {q.prompt}
-                    </h4>
+                    </div>
 
                     {/* Choix QCM */}
                     {q.choices && q.choices.length > 0 && (
@@ -382,9 +382,9 @@ export function CompositionViewer({ campaigns }: { campaigns: CampaignCompositio
                     </span>
                   </div>
 
-                  <p style={{ margin: "0 0 12px", fontWeight: 600, color: "#263545", fontSize: 14 }}>
+                  <div style={{ margin: "0 0 16px", fontWeight: 600, color: "#263545", fontSize: 14, whiteSpace: "pre-wrap", lineHeight: 1.7, wordBreak: "break-word" }}>
                     {q.prompt}
-                  </p>
+                  </div>
 
                   <div
                     style={{

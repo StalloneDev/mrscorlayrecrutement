@@ -696,19 +696,26 @@ export function AssessmentClient({
               </span>
             </div>
 
-            <h2
+            <div
               style={{
-                fontSize: 18,
-                lineHeight: 1.6,
-                marginBottom: 24,
-                fontWeight: 700,
+                fontSize: 15,
+                lineHeight: 1.8,
+                marginBottom: 28,
+                fontWeight: 500,
                 color: "#1e293b",
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+                background: "#f8fafc",
+                border: "1px solid #e2e8f0",
+                borderRadius: 12,
+                padding: "20px 24px",
+                letterSpacing: "0.01em",
                 userSelect: "none",
                 WebkitUserSelect: "none",
               }}
             >
               {currentQ.prompt}
-            </h2>
+            </div>
 
             {/* Saisie de la réponse selon le type */}
 

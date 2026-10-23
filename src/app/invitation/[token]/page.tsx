@@ -66,7 +66,7 @@ export default async function InvitationPage({ params }: Props) {
           </p>
 
           <p style={{ fontSize: 12, color: "#94a3b8", margin: 0 }}>
-            Si vous pensez qu&apos;il s&apos;agit d&apos;une erreur, veuillez contacter directement l&apos;équipe RH de MRS &amp; CORLAY.
+            Si vous pensez qu&apos;il s&apos;agit d&apos;une erreur, veuillez contacter directement l&apos;équipe RH de MRS HOLDINGS.
           </p>
         </div>
       </div>
@@ -155,57 +155,52 @@ export default async function InvitationPage({ params }: Props) {
       <div
         style={{
           width: "100%",
-          maxWidth: 600,
+          maxWidth: 680,
           background: "#ffffff",
           borderRadius: 16,
           boxShadow: "0 20px 45px rgba(0,0,0,0.35)",
           overflow: "hidden",
         }}
       >
-        {/* En-tête officiel */}
+        {/* En-tête officiel - Pas de logo ici, sobre et solennel en bleu nuit */}
         <div
           style={{
-            background: "linear-gradient(135deg, #E06810 0%, #B44E09 100%)",
-            padding: "32px 30px 26px",
+            background: "linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%)",
+            padding: "36px 32px 30px",
             textAlign: "center",
             color: "#ffffff",
           }}
         >
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>
-            <Brand inverse size="lg" />
-          </div>
           <div
             style={{
               display: "inline-block",
-              background: "rgba(255,255,255,0.2)",
-              color: "#ffffff",
-              padding: "4px 12px",
+              background: "rgba(255,255,255,0.15)",
+              color: "#93c5fd",
+              padding: "5px 14px",
               borderRadius: 20,
               fontSize: 11,
               fontWeight: 700,
               letterSpacing: "0.08em",
-              marginBottom: 10,
+              marginBottom: 12,
             }}
           >
-            {data.companyName.toUpperCase()} · CONCOURS &amp; ÉVALUATION
+            MRS BENIN · ÉVALUATION TECHNIQUE EN LIGNE
           </div>
-          <h1 style={{ margin: "4px 0 6px", fontSize: 22, fontWeight: 800, letterSpacing: "-0.02em" }}>
-            {data.campaignTitle}
+          <h1 style={{ margin: "0 0 8px", fontSize: 22, fontWeight: 800, letterSpacing: "-0.01em", textTransform: "uppercase" }}>
+            Bienvenue sur notre plateforme de recrutement
           </h1>
-          {data.campaignDescription && (
-            <p style={{ margin: 0, fontSize: 13, color: "rgba(255,255,255,0.9)", lineHeight: 1.5 }}>
-              {data.campaignDescription}
-            </p>
-          )}
+          <p style={{ margin: 0, fontSize: 14, color: "#e2e8f0", fontWeight: 500 }}>
+            Poste : <strong>{data.campaignTitle}</strong>
+          </p>
         </div>
 
-        {/* Corps de la carte */}
-        <div style={{ padding: "28px 30px" }}>
+        {/* Corps de la page */}
+        <div style={{ padding: "32px 32px" }}>
           {/* Badge candidat */}
           <div
             style={{
               background: "#f8fafc",
-              border: "1px solid #e2e8f0",
+              border: "1px solid #cbd5e1",
               borderRadius: 10,
               padding: "14px 18px",
               marginBottom: 20,
@@ -216,60 +211,73 @@ export default async function InvitationPage({ params }: Props) {
           >
             <div
               style={{
-                width: 38,
-                height: 38,
+                width: 42,
+                height: 42,
                 borderRadius: "50%",
-                background: "#E06810",
+                background: "#1e3a8a",
                 color: "#ffffff",
                 display: "grid",
                 placeItems: "center",
                 fontWeight: 700,
-                fontSize: 14,
+                fontSize: 15,
                 flexShrink: 0,
               }}
             >
               {data.candidateFirstName[0]}{data.candidateLastName[0]}
             </div>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: "#1e293b" }}>
-                Bonjour, {data.candidateFirstName} {data.candidateLastName}
+              <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
+                Chère Candidate, Cher Candidat ({data.candidateFirstName} {data.candidateLastName})
               </div>
               <div style={{ fontSize: 12, color: "#64748b" }}>{data.candidateEmail}</div>
             </div>
           </div>
 
+          {/* Message de bienvenue officiel */}
+          <div style={{ fontSize: 13.5, color: "#334155", lineHeight: 1.65, marginBottom: 20 }}>
+            <p style={{ margin: "0 0 12px" }}>
+              Nous vous souhaitons la bienvenue sur la plateforme de recrutement de <strong>MRS BENIN</strong>, dans le cadre du processus de sélection pour le poste de <strong>{data.campaignTitle}</strong>.
+            </p>
+            <p style={{ margin: "0 0 12px" }}>
+              Nous vous remercions de l’intérêt que vous portez à cette opportunité professionnelle et vous invitons à aborder cette évaluation avec sérieux, concentration et professionnalisme.
+            </p>
+            <p style={{ margin: 0 }}>
+              Cette étape vise à apprécier vos compétences techniques, votre capacité d’analyse, votre rigueur organisationnelle ainsi que votre sens de l’éthique et de l’intégrité professionnelle.
+            </p>
+          </div>
+
           {/* Grille informations clés */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 22 }}>
             <div
               style={{
-                background: "#ffffff",
-                border: "1.5px solid #e2e8f0",
+                background: "#f8fafc",
+                border: "1.5px solid #cbd5e1",
                 borderRadius: 10,
                 padding: "14px",
                 textAlign: "center",
               }}
             >
-              <Clock size={22} style={{ color: "#E06810", margin: "0 auto 6px" }} />
-              <div style={{ fontSize: 11, color: "#64748b", textTransform: "uppercase", fontWeight: 600 }}>
-                Durée impartie
+              <Clock size={22} style={{ color: "#1e3a8a", margin: "0 auto 6px" }} />
+              <div style={{ fontSize: 11, color: "#64748b", textTransform: "uppercase", fontWeight: 700 }}>
+                Durée du test
               </div>
               <div style={{ fontSize: 16, fontWeight: 800, color: "#0f172a", marginTop: 2 }}>
-                {data.durationMinutes} minutes
+                {data.durationMinutes >= 120 ? "2 heures" : `${data.durationMinutes} minutes`}
               </div>
             </div>
 
             <div
               style={{
-                background: "#ffffff",
-                border: "1.5px solid #e2e8f0",
+                background: "#f8fafc",
+                border: "1.5px solid #cbd5e1",
                 borderRadius: 10,
                 padding: "14px",
                 textAlign: "center",
               }}
             >
-              <HelpCircle size={22} style={{ color: "#E06810", margin: "0 auto 6px" }} />
-              <div style={{ fontSize: 11, color: "#64748b", textTransform: "uppercase", fontWeight: 600 }}>
-                Constitution
+              <HelpCircle size={22} style={{ color: "#1e3a8a", margin: "0 auto 6px" }} />
+              <div style={{ fontSize: 11, color: "#64748b", textTransform: "uppercase", fontWeight: 700 }}>
+                Structure de l&apos;épreuve
               </div>
               <div style={{ fontSize: 16, fontWeight: 800, color: "#0f172a", marginTop: 2 }}>
                 {data.questionCount} question{data.questionCount > 1 ? "s" : ""}
@@ -280,29 +288,63 @@ export default async function InvitationPage({ params }: Props) {
           {/* Consignes importantes */}
           <div
             style={{
-              background: "#fffaf0",
-              border: "1px solid #fed7aa",
+              background: "#eff6ff",
+              border: "1.5px solid #bfdbfe",
               borderRadius: 10,
-              padding: "14px 16px",
+              padding: "18px 20px",
               marginBottom: 24,
-              fontSize: 12,
-              color: "#7c2d12",
+              fontSize: 13,
+              color: "#1e3a8a",
               lineHeight: 1.6,
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 700, marginBottom: 6 }}>
-              <AlertTriangle size={15} color="#ea580c" />
-              <span>Consignes obligatoires avant de débuter :</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 800, marginBottom: 8, color: "#172554", fontSize: 13.5 }}>
+              <AlertTriangle size={17} color="#2563eb" />
+              <span>CONSIGNES IMPORTANTES</span>
             </div>
-            <ul style={{ margin: 0, paddingLeft: 18 }}>
-              <li>Le chronomètre s&apos;active immédiatement dès la validation du formulaire ci-dessous.</li>
-              <li>Vos réponses sont <strong>sauvegardées automatiquement</strong> à chaque frappe.</li>
-              <li>À la fin du temps réglementaire, vos réponses sont clôturées et transmises automatiquement.</li>
+            <p style={{ margin: "0 0 8px", fontWeight: 600 }}>Avant de commencer votre évaluation, nous vous invitons à :</p>
+            <ul style={{ margin: 0, paddingLeft: 20 }}>
+              <li style={{ marginBottom: 4 }}>Lire attentivement toutes les instructions affichées sur la plateforme.</li>
+              <li style={{ marginBottom: 4 }}>Vous assurer de disposer d’une connexion Internet stable et d’un environnement calme.</li>
+              <li style={{ marginBottom: 4 }}>Répondre personnellement à toutes les questions, avec honnêteté et professionnalisme.</li>
+              <li style={{ marginBottom: 4 }}>Respecter strictement le temps imparti ainsi que les règles de l’évaluation.</li>
+              <li>Éviter toute assistance extérieure ou toute pratique susceptible de compromettre l’intégrité du processus.</li>
             </ul>
+            <p style={{ margin: "10px 0 0", fontSize: 12, color: "#1e40af", fontStyle: "italic" }}>
+              Nous vous rappelons que l’intégrité, la confidentialité, la rigueur et le respect des règles professionnelles constituent des valeurs essentielles dans le cadre de ce recrutement.
+            </p>
           </div>
 
           {/* Formulaire de confirmation */}
           <VerificationForm token={token} />
+
+          {/* Signature avec logo en bas */}
+          <div
+            style={{
+              marginTop: 32,
+              paddingTop: 24,
+              borderTop: "1px solid #e2e8f0",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <div>
+              <div style={{ fontSize: 13, color: "#475569", fontWeight: 600 }}>
+                Nous vous souhaitons une excellente évaluation et plein succès dans la suite du processus de sélection.
+              </div>
+              <div style={{ marginTop: 8, fontSize: 14, fontWeight: 800, color: "#0f172a" }}>
+                L’équipe Recrutement
+              </div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#1e3a8a" }}>
+                MRS BENIN · MRS HOLDINGS
+              </div>
+            </div>
+
+            <div style={{ flexShrink: 0, marginLeft: 20 }}>
+              <Brand size="md" />
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -326,13 +368,13 @@ function VerificationForm({ token }: { token: string }) {
 
   return (
     <form action={handleStart} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: 18, marginBottom: 2 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 700, color: "#1e293b" }}>
-          <UserCheck size={16} color="#E06810" />
-          <span>Confirmation d&apos;identité du candidat</span>
+      <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: 14, marginBottom: 2 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 700, color: "#0f172a" }}>
+          <UserCheck size={16} color="#1e3a8a" />
+          <span>Confirmation d&apos;identité pour démarrer le test</span>
         </div>
-        <p style={{ margin: "4px 0 0", fontSize: 11, color: "#64748b" }}>
-          Renseignez vos identifiants pour débloquer l&apos;épreuve et démarrer le chronomètre.
+        <p style={{ margin: "4px 0 0", fontSize: 11.5, color: "#64748b" }}>
+          Confirmez vos identifiants pour accéder aux épreuves et enclencher le chronomètre.
         </p>
       </div>
 
@@ -398,22 +440,22 @@ function VerificationForm({ token }: { token: string }) {
         type="submit"
         style={{
           marginTop: 6,
-          height: 46,
+          height: 48,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           gap: 8,
-          background: "linear-gradient(135deg, #E06810 0%, #B44E09 100%)",
+          background: "linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%)",
           color: "#ffffff",
           border: "none",
           borderRadius: 8,
           fontSize: 14,
           fontWeight: 700,
           cursor: "pointer",
-          boxShadow: "0 4px 12px rgba(224, 104, 16, 0.35)",
+          boxShadow: "0 4px 14px rgba(30, 58, 138, 0.35)",
         }}
       >
-        <span>Confirmer &amp; Commencer l&apos;épreuve</span>
+        <span>Confirmer &amp; Démarrer mon évaluation</span>
         <ArrowRight size={16} />
       </button>
 
@@ -423,13 +465,13 @@ function VerificationForm({ token }: { token: string }) {
           alignItems: "center",
           justifyContent: "center",
           gap: 6,
-          color: "#94a3b8",
-          fontSize: 11,
+          color: "#64748b",
+          fontSize: 11.5,
           marginTop: 4,
         }}
       >
-        <ShieldCheck size={14} color="#E06810" />
-        <span>Session surveillée et sécurisée par MRS &amp; CORLAY</span>
+        <ShieldCheck size={14} color="#1e3a8a" />
+        <span>Session surveillée et sécurisée · MRS HOLDINGS</span>
       </div>
     </form>
   );

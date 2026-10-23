@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect, useRef, useTransition } from "react";
+import { useState, useEffect, useRef, useTransition, useMemo } from "react";
 import {
   saveCandidateAnswerAction,
   submitAssessmentAction,
   recordProctoringEventAction,
 } from "@/actions/assessments";
 import { Brand } from "@/components/Brand";
+import { FormattedPrompt } from "@/components/FormattedPrompt";
 import {
   Clock,
   CheckCircle2,
@@ -17,6 +18,8 @@ import {
   ShieldCheck,
   ShieldAlert,
   AlertTriangle,
+  Layers,
+  FileText,
 } from "lucide-react";
 
 interface Question {
@@ -42,6 +45,62 @@ interface AssessmentClientProps {
   submittedAt: string | null;
 }
 
+interface Epreuve {
+  id: string;
+  code: string;
+  shortCode: string;
+  title: string;
+  points: number;
+  questions: (Question & { globalIndex: number })[];
+}
+
+function groupQuestionsIntoEpreuves(questions: Question[]): Epreuve[] {
+  const map = new Map<string, { code: string; shortCode: string; title: string; points: number; questions: (Question & { globalIndex: number })[] }>();
+
+  questions.forEach((q, idx) => {
+    // Détecte "Partie A : Questions..." ou "Épreuve 1 : ..."
+    const match = q.prompt.match(/^(?:Partie|Épreuve)\s*([A-Z0-9]+)\s*:\s*([^(\n\r]+)(?:\((\d+)\s*points?\))?/i);
+    let key = "";
+    let code = "";
+    let shortCode = "";
+    let title = "";
+
+    if (match) {
+      const partLetter = match[1].trim();
+      key = `PART_${partLetter}`;
+      code = `Partie ${partLetter}`;
+      shortCode = `Partie ${partLetter}`;
+      title = match[2].trim();
+    } else if (q.category && q.category !== "Général") {
+      key = `CAT_${q.category}`;
+      code = q.category;
+      shortCode = q.category;
+      title = q.competency || q.category;
+    } else {
+      key = `ALL`;
+      code = `Épreuve Complète`;
+      shortCode = `Épreuve 1`;
+      title = `Évaluation Technique`;
+    }
+
+    if (!map.has(key)) {
+      map.set(key, { code, shortCode, title, points: 0, questions: [] });
+    }
+    const group = map.get(key)!;
+    group.questions.push({ ...q, globalIndex: idx + 1 });
+    group.points += q.points;
+  });
+
+  return Array.from(map.entries()).map(([k, g], idx) => ({
+    id: `epreuve-${idx + 1}`,
+    code: `Épreuve ${idx + 1} (${g.code})`,
+    shortCode: `Épreuve ${idx + 1} — ${g.shortCode}`,
+    title: g.title,
+    points: g.points,
+    questions: g.questions,
+  }));
+}
+
 export function AssessmentClient({
   attemptId,
   initialSecondsRemaining,
@@ -52,12 +111,13 @@ export function AssessmentClient({
   campaignTitle,
   submittedAt: initialSubmittedAt,
 }: AssessmentClientProps) {
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const epreuves = useMemo(() => groupQuestionsIntoEpreuves(questions), [questions]);
+  const [currentEpreuveIndex, setCurrentEpreuveIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>(initialAnswers);
   const [secondsRemaining, setSecondsRemaining] = useState(initialSecondsRemaining);
   const [isSubmitted, setIsSubmitted] = useState(Boolean(initialSubmittedAt));
   const [submissionReason, setSubmissionReason] = useState<string | null>(null);
-  const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "error">("saved");
+  const [saveStatuses, setSaveStatuses] = useState<Record<string, "saved" | "saving" | "error">>({});
   const [isPending, startTransition] = useTransition();
 
   // ── ÉTATS ANTI-TRICHE (PROCTORING) ──────────────────────────────────────────
@@ -68,14 +128,14 @@ export function AssessmentClient({
   const isPageHiddenRef = useRef(false);
   const warningCountRef = useRef(0);
 
-  const currentQ = questions[currentIndex];
+  const currentEpreuve = epreuves[currentEpreuveIndex] || epreuves[0];
 
   const showCopyAlert = (msg = "⚠️ La copie ou capture du contenu est formellement interdite.") => {
     setCopyToast(msg);
     setTimeout(() => setCopyToast(null), 3500);
   };
 
-  // ── GESTIONNAIRES ANTI-COPIE (OPTION 1) ─────────────────────────────────────
+  // ── GESTIONNAIRES ANTI-COPIE ───────────────────────────────────────────────
   useEffect(() => {
     if (isSubmitted) return;
 
@@ -92,7 +152,6 @@ export function AssessmentClient({
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Bloquer DevTools: F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C
       if (
         e.key === "F12" ||
         ((e.ctrlKey || e.metaKey) && e.shiftKey && ["I", "i", "J", "j", "C", "c"].includes(e.key))
@@ -103,20 +162,17 @@ export function AssessmentClient({
         return;
       }
 
-      // Bloquer Impression / Export PDF : Ctrl+P / Cmd+P
       if ((e.ctrlKey || e.metaKey) && (e.key === "p" || e.key === "P")) {
         e.preventDefault();
         showCopyAlert("⚠️ L'impression ou la capture de l'épreuve est interdite.");
         return;
       }
 
-      // Bloquer Afficher source : Ctrl+U
       if ((e.ctrlKey || e.metaKey) && (e.key === "u" || e.key === "U")) {
         e.preventDefault();
         return;
       }
 
-      // Bloquer Ctrl+C / Cmd+C sur les questions
       if ((e.ctrlKey || e.metaKey) && (e.key === "c" || e.key === "C" || e.key === "x" || e.key === "X")) {
         const target = e.target as HTMLElement;
         const isInput = target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA");
@@ -142,7 +198,7 @@ export function AssessmentClient({
     };
   }, [isSubmitted, attemptId]);
 
-  // ── DÉTECTION SORTIE D'ONGLET / ÉCRAN (OPTION 2) ───────────────────────────
+  // ── DÉTECTION SORTIE D'ONGLET / ÉCRAN ──────────────────────────────────────
   useEffect(() => {
     if (isSubmitted) return;
 
@@ -165,7 +221,6 @@ export function AssessmentClient({
       isPageHiddenRef.current = false;
 
       if (warningCountRef.current >= 4) {
-        // Déclencher soumission automatique forcée pour violation proctoring
         setSubmissionReason("proctoring_violation");
         handleAutoSubmit("proctoring_violation");
       } else {
@@ -223,29 +278,36 @@ export function AssessmentClient({
     }
   };
 
-  const handleAnswerChange = (val: string) => {
-    if (!currentQ || isSubmitted) return;
-    const newAnswers = { ...answers, [currentQ.id]: val };
-    setAnswers(newAnswers);
-    setSaveStatus("saving");
+  const handleAnswerChange = (questionId: string, val: string) => {
+    if (isSubmitted) return;
+    setAnswers((prev) => ({ ...prev, [questionId]: val }));
+    setSaveStatuses((prev) => ({ ...prev, [questionId]: "saving" }));
 
     startTransition(async () => {
       try {
-        await saveCandidateAnswerAction(attemptId, currentQ.id, val);
-        setSaveStatus("saved");
+        await saveCandidateAnswerAction(attemptId, questionId, val);
+        setSaveStatuses((prev) => ({ ...prev, [questionId]: "saved" }));
       } catch (e) {
         console.error("Save error:", e);
-        setSaveStatus("error");
+        setSaveStatuses((prev) => ({ ...prev, [questionId]: "error" }));
       }
     });
   };
 
+  const totalAnswered = useMemo(() => {
+    return questions.filter((q) => answers[q.id] && answers[q.id].trim().length > 0).length;
+  }, [questions, answers]);
+
   const handleVoluntarySubmit = () => {
-    if (
-      confirm(
-        "Êtes-vous certain(e) de vouloir soumettre définitivement votre épreuve ?\n\nVos réponses seront immédiatement transmises au comité de recrutement de MRS & CORLAY."
-      )
-    ) {
+    const unanswered = questions.length - totalAnswered;
+    let confirmMsg = `Êtes-vous certain(e) de vouloir soumettre définitivement votre épreuve ?\n\n`;
+    confirmMsg += `• Questions répondues : ${totalAnswered} / ${questions.length}\n`;
+    if (unanswered > 0) {
+      confirmMsg += `⚠️ Attention : vous avez encore ${unanswered} question(s) sans réponse.\n\n`;
+    }
+    confirmMsg += `Vos réponses seront immédiatement transmises au comité de recrutement de MRS HOLDINGS.`;
+
+    if (confirm(confirmMsg)) {
       startTransition(async () => {
         await submitAssessmentAction(attemptId);
         setIsSubmitted(true);
@@ -272,14 +334,14 @@ export function AssessmentClient({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "linear-gradient(135deg, #1f2d3d 0%, #26394b 50%, #1a2530 100%)",
+          background: "linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%)",
           padding: "24px",
           boxSizing: "border-box",
         }}
       >
         <div
           style={{
-            maxWidth: 540,
+            maxWidth: 560,
             width: "100%",
             background: "#ffffff",
             borderRadius: 16,
@@ -288,33 +350,29 @@ export function AssessmentClient({
             textAlign: "center",
           }}
         >
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
-            <Brand size="lg" />
-          </div>
-
           <div
             style={{
-              margin: "0 auto 16px",
-              width: 64,
-              height: 64,
+              margin: "0 auto 18px",
+              width: 68,
+              height: 68,
               borderRadius: "50%",
-              background: isViolation ? "#fef2f2" : "#ecfdf5",
-              color: isViolation ? "#dc2626" : "#059669",
-              border: `2px solid ${isViolation ? "#fecaca" : "#a7f3d0"}`,
+              background: isViolation ? "#fef2f2" : "#eff6ff",
+              color: isViolation ? "#dc2626" : "#1e3a8a",
+              border: `2px solid ${isViolation ? "#fecaca" : "#bfdbfe"}`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 28,
+              fontSize: 30,
               fontWeight: "bold",
             }}
           >
             {isViolation ? "⚠️" : "✓"}
           </div>
 
-          <h2 style={{ fontSize: 22, fontWeight: 800, color: "#1e293b", margin: "0 0 10px" }}>
-            {isViolation ? "Épreuve clôturée pour violation de sécurité" : "Épreuve terminée & transmise"}
+          <h2 style={{ fontSize: 22, fontWeight: 800, color: "#0f172a", margin: "0 0 10px" }}>
+            {isViolation ? "Épreuve clôturée pour violation de sécurité" : "Épreuve terminée & transmise avec succès"}
           </h2>
-          <p style={{ fontSize: 14, color: "#64748b", lineHeight: 1.6, margin: "0 0 20px" }}>
+          <p style={{ fontSize: 14, color: "#475569", lineHeight: 1.6, margin: "0 0 20px" }}>
             {isViolation ? (
               <>
                 Votre session pour l&apos;épreuve <strong>{campaignTitle}</strong> a été automatiquement
@@ -324,7 +382,7 @@ export function AssessmentClient({
             ) : (
               <>
                 Merci <strong>{candidateName}</strong>. L&apos;ensemble de vos réponses pour l&apos;épreuve{" "}
-                <strong>{campaignTitle}</strong> a bien été enregistré avec succès.
+                <strong>{campaignTitle}</strong> a bien été enregistré ({totalAnswered} / {questions.length} questions traitées).
               </>
             )}
           </p>
@@ -332,30 +390,25 @@ export function AssessmentClient({
           <div
             style={{
               background: "#f8fafc",
-              border: "1px solid #e2e8f0",
+              border: "1px solid #cbd5e1",
               borderRadius: 10,
               padding: "16px",
               fontSize: 13,
-              color: "#475569",
+              color: "#334155",
               lineHeight: 1.5,
-              marginBottom: 10,
+              marginBottom: 24,
             }}
           >
-            L&apos;équipe RH examinera votre copie. Vous serez tenu(e) informé(e) de la suite donnée à votre
-            candidature.
+            L&apos;équipe Recrutement de MRS HOLDINGS examinera attentivement votre copie. Vous serez tenu(e) informé(e) des résultats.
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "center" }}>
+            <Brand size="md" />
           </div>
         </div>
       </div>
     );
   }
-
-  // Vérification si la question est de type texte
-  const isTextKind =
-    currentQ &&
-    (currentQ.kind === "text" ||
-      currentQ.kind === "long_text" ||
-      currentQ.kind === "short_text" ||
-      (!currentQ.choices || currentQ.choices.length === 0));
 
   return (
     <div
@@ -363,7 +416,7 @@ export function AssessmentClient({
         minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
-        background: "#f4f6f8",
+        background: "#f1f5f9",
         fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif",
         userSelect: "none",
         WebkitUserSelect: "none",
@@ -394,7 +447,7 @@ export function AssessmentClient({
         </div>
       )}
 
-      {/* ── MODALE D'ALERTE CHANGEMENT D'ONGLET (OPTION 2) ────────────────── */}
+      {/* ── MODALE D'ALERTE CHANGEMENT D'ONGLET ───────────────────────────── */}
       {showWarningModal && (
         <div
           style={{
@@ -441,26 +494,26 @@ export function AssessmentClient({
             </h3>
 
             <p style={{ fontSize: 13, color: "#475569", lineHeight: 1.6, margin: "0 0 16px" }}>
-              Vous venez de quitter l&apos;onglet ou la fenêtre de composition de l&apos;épreuve. Cette action est{" "}
-              <strong>immédiatement consignée</strong> dans le journal d&apos;audit de recrutement MRS &amp; CORLAY.
+              Vous venez de quitter l&apos;onglet ou la fenêtre de composition. Cette tentative est{" "}
+              <strong>immédiatement consignée</strong> dans le journal d&apos;audit de recrutement MRS HOLDINGS.
             </p>
 
             <div
               style={{
-                background: warningCount >= 3 ? "#fef2f2" : "#fff7ed",
-                border: `1.5px solid ${warningCount >= 3 ? "#fca5a5" : "#fed7aa"}`,
+                background: warningCount >= 3 ? "#fef2f2" : "#eff6ff",
+                border: `1.5px solid ${warningCount >= 3 ? "#fca5a5" : "#bfdbfe"}`,
                 borderRadius: 10,
                 padding: "14px 18px",
                 marginBottom: 20,
                 fontSize: 13,
                 fontWeight: 700,
-                color: warningCount >= 3 ? "#b91c1c" : "#c2410c",
+                color: warningCount >= 3 ? "#b91c1c" : "#1e3a8a",
                 lineHeight: 1.5,
               }}
             >
               {warningCount < 3 ? (
                 <span>
-                  Avertissement <strong>{warningCount}</strong> sur 3 autorisé(s). À la 4ème sortie, l&apos;épreuve
+                  Avertissement <strong>{warningCount}</strong> sur 3 autorisé(s). À la 4ème infraction, l&apos;épreuve
                   sera <strong>automatiquement transmise et invalidée</strong>.
                 </span>
               ) : (
@@ -475,7 +528,7 @@ export function AssessmentClient({
               type="button"
               onClick={() => setShowWarningModal(false)}
               style={{
-                background: "linear-gradient(135deg, #E06810 0%, #B44E09 100%)",
+                background: "linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%)",
                 color: "#ffffff",
                 border: "none",
                 borderRadius: 10,
@@ -484,7 +537,7 @@ export function AssessmentClient({
                 fontWeight: 800,
                 cursor: "pointer",
                 width: "100%",
-                boxShadow: "0 4px 14px rgba(224, 104, 16, 0.4)",
+                boxShadow: "0 4px 14px rgba(30, 58, 138, 0.4)",
               }}
             >
               Je confirme reprendre mon épreuve
@@ -497,7 +550,7 @@ export function AssessmentClient({
       <header
         style={{
           background: "#ffffff",
-          borderBottom: "1px solid #e2e8f0",
+          borderBottom: "1px solid #cbd5e1",
           padding: "12px 28px",
           display: "flex",
           alignItems: "center",
@@ -510,10 +563,10 @@ export function AssessmentClient({
       >
         <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
           <Brand size="sm" />
-          <div style={{ height: 24, width: 1, background: "#e2e8f0" }} />
+          <div style={{ height: 24, width: 1, background: "#cbd5e1" }} />
           <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "#1e293b" }}>{campaignTitle}</div>
-            <div style={{ fontSize: 11, color: "#64748b" }}>{companyName}</div>
+            <div style={{ fontSize: 13.5, fontWeight: 800, color: "#0f172a" }}>{campaignTitle}</div>
+            <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>{companyName} · MRS HOLDINGS</div>
           </div>
         </div>
 
@@ -524,25 +577,25 @@ export function AssessmentClient({
               display: "inline-flex",
               alignItems: "center",
               gap: 6,
-              background: warningCount > 0 ? "#fef2f2" : "#f0fdf4",
-              color: warningCount > 0 ? "#dc2626" : "#166534",
-              border: `1px solid ${warningCount > 0 ? "#fecaca" : "#bbf7d0"}`,
+              background: warningCount > 0 ? "#fef2f2" : "#eff6ff",
+              color: warningCount > 0 ? "#dc2626" : "#1e3a8a",
+              border: `1px solid ${warningCount > 0 ? "#fecaca" : "#bfdbfe"}`,
               padding: "5px 12px",
               borderRadius: 8,
-              fontSize: 11,
+              fontSize: 11.5,
               fontWeight: 700,
             }}
             title="Protection anti-triche active : copie interdite et sorties d'écran surveillées"
           >
             {warningCount > 0 ? <ShieldAlert size={14} /> : <ShieldCheck size={14} />}
             <span>
-              {warningCount === 0 ? "Protection anti-triche active" : `Sorties d'écran : ${warningCount}/3`}
+              {warningCount === 0 ? "Surveillance active" : `Sorties d'écran : ${warningCount}/3`}
             </span>
           </div>
 
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "#1e293b" }}>{candidateName}</div>
-            <div style={{ fontSize: 11, color: "#64748b" }}>Candidat(e) connecté(e)</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>{candidateName}</div>
+            <div style={{ fontSize: 11, color: "#64748b" }}>Candidat(e) en composition</div>
           </div>
 
           {/* Chronomètre avec alerte temps faible */}
@@ -551,9 +604,9 @@ export function AssessmentClient({
               display: "flex",
               alignItems: "center",
               gap: 8,
-              background: isLowTime ? "#fef2f2" : "#fff7ed",
-              color: isLowTime ? "#b91c1c" : "#c2410c",
-              border: `1.5px solid ${isLowTime ? "#fca5a5" : "#fdba74"}`,
+              background: isLowTime ? "#fef2f2" : "#eff6ff",
+              color: isLowTime ? "#b91c1c" : "#1e3a8a",
+              border: `1.5px solid ${isLowTime ? "#fca5a5" : "#93c5fd"}`,
               padding: "6px 14px",
               borderRadius: 8,
               fontWeight: 800,
@@ -571,7 +624,7 @@ export function AssessmentClient({
       {/* Contenu principal */}
       <main
         style={{
-          maxWidth: 920,
+          maxWidth: 960,
           width: "100%",
           margin: "24px auto",
           padding: "0 20px",
@@ -579,308 +632,433 @@ export function AssessmentClient({
           boxSizing: "border-box",
         }}
       >
-        {/* Barre de navigation des questions */}
+        {/* ── ONGLETS PAR ÉPREUVE ────────────────────────────────────────── */}
         <div
           style={{
             background: "#ffffff",
             borderRadius: 12,
-            padding: "14px 20px",
-            border: "1px solid #e2e8f0",
+            padding: "10px 14px",
+            border: "1px solid #cbd5e1",
             marginBottom: 20,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: 12,
+            boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
           }}
         >
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-            {questions.map((q, idx) => {
-              const answered = Boolean(answers[q.id] && answers[q.id].trim().length > 0);
-              const isCurrent = idx === currentIndex;
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8, padding: "0 4px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              <Layers size={14} color="#1e3a8a" />
+              <span>Onglets des épreuves ({epreuves.length} épreuves)</span>
+            </div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#1e3a8a" }}>
+              Progression globale : {totalAnswered} / {questions.length} questions traitées
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+            {epreuves.map((ep, idx) => {
+              const isCurrent = idx === currentEpreuveIndex;
+              const answeredCount = ep.questions.filter((q) => answers[q.id] && answers[q.id].trim().length > 0).length;
+              const isComplete = answeredCount === ep.questions.length && ep.questions.length > 0;
+
               return (
                 <button
-                  key={q.id}
+                  key={ep.id}
                   type="button"
-                  onClick={() => setCurrentIndex(idx)}
+                  onClick={() => {
+                    setCurrentEpreuveIndex(idx);
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
                   style={{
-                    width: 34,
-                    height: 34,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "8px 16px",
                     borderRadius: 8,
                     border: isCurrent
-                      ? "2px solid #E06810"
-                      : answered
-                      ? "1px solid #cbd5e1"
-                      : "1px solid #e2e8f0",
-                    background: isCurrent ? "#E06810" : answered ? "#f8fafc" : "#ffffff",
-                    color: isCurrent ? "#ffffff" : answered ? "#0f172a" : "#64748b",
-                    fontWeight: isCurrent || answered ? 800 : 500,
-                    fontSize: 13,
+                      ? "2px solid #1e3a8a"
+                      : isComplete
+                      ? "1px solid #86efac"
+                      : "1px solid #cbd5e1",
+                    background: isCurrent
+                      ? "linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%)"
+                      : isComplete
+                      ? "#f0fdf4"
+                      : "#ffffff",
+                    color: isCurrent ? "#ffffff" : isComplete ? "#15803d" : "#334155",
+                    fontWeight: isCurrent ? 800 : 600,
+                    fontSize: 12.5,
                     cursor: "pointer",
                     transition: "all 0.15s ease",
+                    boxShadow: isCurrent ? "0 4px 10px rgba(30,58,138,0.25)" : "none",
                   }}
                 >
-                  {idx + 1}
+                  <span>{ep.shortCode}</span>
+                  <span
+                    style={{
+                      fontSize: 11,
+                      padding: "2px 6px",
+                      borderRadius: 10,
+                      background: isCurrent ? "rgba(255,255,255,0.2)" : isComplete ? "#bbf7d0" : "#f1f5f9",
+                      color: isCurrent ? "#ffffff" : isComplete ? "#166534" : "#64748b",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {answeredCount}/{ep.questions.length}
+                  </span>
+                  {isComplete && !isCurrent && <span style={{ fontSize: 12 }}>✓</span>}
                 </button>
               );
             })}
           </div>
-
-          <div style={{ fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
-            {saveStatus === "saving" && (
-              <span style={{ color: "#d97706" }}>Enregistrement en cours...</span>
-            )}
-            {saveStatus === "saved" && (
-              <span style={{ color: "#059669", display: "flex", alignItems: "center", gap: 4 }}>
-                <CheckCircle2 size={14} /> Réponses enregistrées
-              </span>
-            )}
-            {saveStatus === "error" && (
-              <span style={{ color: "#dc2626", display: "flex", alignItems: "center", gap: 4 }}>
-                <AlertCircle size={14} /> Erreur de connexion
-              </span>
-            )}
-          </div>
         </div>
 
-        {/* Carte de la question courante */}
-        {currentQ ? (
+        {/* ── BANNIÈRE DE L'ÉPREUVE ACTIVE ───────────────────────────────── */}
+        {currentEpreuve && (
           <div
             style={{
-              background: "#ffffff",
+              background: "linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%)",
+              color: "#ffffff",
               borderRadius: 14,
-              border: "1px solid #e2e8f0",
-              boxShadow: "0 4px 16px rgba(0,0,0,0.03)",
-              padding: "32px",
-              marginBottom: 20,
+              padding: "22px 26px",
+              marginBottom: 24,
+              boxShadow: "0 6px 20px rgba(15,23,42,0.15)",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: 16,
             }}
           >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 18,
-                paddingBottom: 14,
-                borderBottom: "1px solid #f1f5f9",
-              }}
-            >
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <span
-                  style={{
-                    background: "#E06810",
-                    color: "#ffffff",
-                    padding: "4px 10px",
-                    borderRadius: 6,
-                    fontSize: 12,
-                    fontWeight: 700,
-                  }}
-                >
-                  Question {currentIndex + 1} / {questions.length}
-                </span>
-                <span
-                  style={{
-                    background: "#f1f5f9",
-                    color: "#475569",
-                    padding: "4px 10px",
-                    borderRadius: 6,
-                    fontSize: 12,
-                    fontWeight: 600,
-                  }}
-                >
-                  {currentQ.competency || currentQ.category}
-                </span>
+            <div>
+              <div
+                style={{
+                  display: "inline-block",
+                  background: "rgba(255,255,255,0.18)",
+                  color: "#93c5fd",
+                  padding: "3px 10px",
+                  borderRadius: 6,
+                  fontSize: 11,
+                  fontWeight: 800,
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                  marginBottom: 6,
+                }}
+              >
+                Épreuve {currentEpreuveIndex + 1} sur {epreuves.length} · {currentEpreuve.code}
               </div>
-              <span style={{ fontWeight: 700, color: "#64748b", fontSize: 13 }}>
-                Valeur : {currentQ.points} point{currentQ.points > 1 ? "s" : ""}
-              </span>
+              <h2 style={{ margin: "2px 0 4px", fontSize: 18, fontWeight: 800, letterSpacing: "-0.01em" }}>
+                {currentEpreuve.title}
+              </h2>
+              <div style={{ fontSize: 12.5, color: "#cbd5e1" }}>
+                Cette épreuve regroupe <strong>{currentEpreuve.questions.length} question{currentEpreuve.questions.length > 1 ? "s" : ""}</strong> à traiter directement ci-dessous.
+              </div>
             </div>
 
             <div
               style={{
-                fontSize: 15,
-                lineHeight: 1.8,
-                marginBottom: 28,
-                fontWeight: 500,
-                color: "#1e293b",
-                whiteSpace: "pre-wrap",
-                wordBreak: "break-word",
-                background: "#f8fafc",
-                border: "1px solid #e2e8f0",
-                borderRadius: 12,
-                padding: "20px 24px",
-                letterSpacing: "0.01em",
-                userSelect: "none",
-                WebkitUserSelect: "none",
+                background: "rgba(255,255,255,0.12)",
+                border: "1px solid rgba(255,255,255,0.25)",
+                borderRadius: 10,
+                padding: "10px 18px",
+                textAlign: "center",
               }}
             >
-              {currentQ.prompt}
+              <div style={{ fontSize: 10.5, textTransform: "uppercase", color: "#93c5fd", fontWeight: 700 }}>
+                Barème total épreuve
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 900, marginTop: 2 }}>
+                {currentEpreuve.points} pts
+              </div>
             </div>
+          </div>
+        )}
 
-            {/* Saisie de la réponse selon le type */}
+        {/* ── LISTE DES QUESTIONS DE CETTE ÉPREUVE SUR LA MÊME PAGE ─────── */}
+        {currentEpreuve && currentEpreuve.questions.length > 0 ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+            {currentEpreuve.questions.map((q) => {
+              const qSave = saveStatuses[q.id] || "saved";
+              const currentVal = answers[q.id] || "";
+              const isAnswered = currentVal.trim().length > 0;
 
-            {/* 1. Zone de texte (long_text, short_text, text, ou sans choix QCM) */}
-            {isTextKind && (
-              <div>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: 12,
-                    fontWeight: 700,
-                    color: "#475569",
-                    marginBottom: 8,
-                  }}
-                >
-                  Votre réponse argumentée :
-                </label>
-                <textarea
-                  style={{
-                    minHeight: 180,
-                    width: "100%",
-                    padding: "14px 16px",
-                    borderRadius: 10,
-                    border: "1.5px solid #cbd5e1",
-                    fontSize: 14,
-                    lineHeight: 1.6,
-                    fontFamily: "inherit",
-                    color: "#0f172a",
-                    outline: "none",
-                    boxSizing: "border-box",
-                    background: "#ffffff",
-                    transition: "border-color 0.2s, box-shadow 0.2s",
-                    userSelect: "text",
-                    WebkitUserSelect: "text",
-                  }}
-                  placeholder="Rédigez clairement votre réponse ici..."
-                  value={answers[currentQ.id] || ""}
-                  onChange={(e) => handleAnswerChange(e.target.value)}
-                  maxLength={currentQ.maxCharacters || undefined}
-                />
+              const isTextKind =
+                q.kind === "text" ||
+                q.kind === "long_text" ||
+                q.kind === "short_text" ||
+                (!q.choices || q.choices.length === 0);
+
+              return (
                 <div
+                  key={q.id}
+                  id={`q-${q.id}`}
                   style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    marginTop: 6,
-                    fontSize: 11,
-                    color: "#94a3b8",
+                    background: "#ffffff",
+                    borderRadius: 14,
+                    border: isAnswered ? "1.5px solid #cbd5e1" : "1.5px solid #e2e8f0",
+                    boxShadow: "0 4px 16px rgba(0,0,0,0.03)",
+                    padding: "28px 30px",
+                    transition: "border-color 0.2s ease",
                   }}
                 >
-                  <span>Vos réponses sont automatiquement mémorisées.</span>
-                  {currentQ.maxCharacters && (
-                    <span>
-                      {(answers[currentQ.id] || "").length} / {currentQ.maxCharacters} caractères max
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* 2. Type Numérique */}
-            {currentQ.kind === "number" && (
-              <div>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: 12,
-                    fontWeight: 700,
-                    color: "#475569",
-                    marginBottom: 8,
-                  }}
-                >
-                  Valeur numérique attendue :
-                </label>
-                <input
-                  type="number"
-                  style={{
-                    width: "100%",
-                    maxWidth: 320,
-                    height: 44,
-                    padding: "0 14px",
-                    borderRadius: 8,
-                    border: "1.5px solid #cbd5e1",
-                    fontSize: 14,
-                    outline: "none",
-                    userSelect: "text",
-                    WebkitUserSelect: "text",
-                  }}
-                  placeholder="Ex. 15000"
-                  value={answers[currentQ.id] || ""}
-                  onChange={(e) => handleAnswerChange(e.target.value)}
-                />
-              </div>
-            )}
-
-            {/* 3. Choix uniques / Choix multiples (QCM) */}
-            {!isTextKind &&
-              (currentQ.kind === "single_choice" ||
-                currentQ.kind === "multiple_choice" ||
-                currentQ.kind === "true_false") &&
-              currentQ.choices &&
-              currentQ.choices.length > 0 && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {currentQ.choices.map((choice, cIdx) => {
-                    const isChecked =
-                      currentQ.kind === "single_choice" || currentQ.kind === "true_false"
-                        ? answers[currentQ.id] === choice
-                        : (answers[currentQ.id] || "").split(";;").includes(choice);
-
-                    return (
-                      <label
-                        key={cIdx}
+                  {/* En-tête de la question */}
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: 16,
+                      paddingBottom: 12,
+                      borderBottom: "1px solid #f1f5f9",
+                      flexWrap: "wrap",
+                      gap: 10,
+                    }}
+                  >
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <span
                         style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 14,
-                          padding: "14px 18px",
-                          border: isChecked ? "2px solid #E06810" : "1.5px solid #e2e8f0",
-                          borderRadius: 10,
-                          background: isChecked ? "#fff7ed" : "#ffffff",
-                          cursor: "pointer",
-                          transition: "all 0.15s ease",
-                          userSelect: "none",
-                          WebkitUserSelect: "none",
+                          background: "#1e3a8a",
+                          color: "#ffffff",
+                          padding: "4px 12px",
+                          borderRadius: 6,
+                          fontSize: 12,
+                          fontWeight: 800,
+                          letterSpacing: "0.02em",
                         }}
                       >
-                        <input
-                          type={
-                            currentQ.kind === "single_choice" || currentQ.kind === "true_false"
-                              ? "radio"
-                              : "checkbox"
-                          }
-                          name={`q_${currentQ.id}`}
-                          checked={isChecked}
-                          onChange={() => {
-                            if (currentQ.kind === "single_choice" || currentQ.kind === "true_false") {
-                              handleAnswerChange(choice);
-                            } else {
-                              const curList = (answers[currentQ.id] || "").split(";;").filter(Boolean);
-                              const updated = isChecked
-                                ? curList.filter((c) => c !== choice)
-                                : [...curList, choice];
-                              handleAnswerChange(updated.join(";;"));
-                            }
-                          }}
+                        Question {q.globalIndex} / {questions.length}
+                      </span>
+                      <span
+                        style={{
+                          background: "#f1f5f9",
+                          color: "#475569",
+                          padding: "4px 10px",
+                          borderRadius: 6,
+                          fontSize: 12,
+                          fontWeight: 600,
+                        }}
+                      >
+                        {q.competency || q.category}
+                      </span>
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                      {/* Statut sauvegarde spécifique question */}
+                      <div style={{ fontSize: 11.5, fontWeight: 600 }}>
+                        {qSave === "saving" && (
+                          <span style={{ color: "#d97706" }}>Enregistrement...</span>
+                        )}
+                        {qSave === "saved" && isAnswered && (
+                          <span style={{ color: "#059669", display: "flex", alignItems: "center", gap: 4 }}>
+                            <CheckCircle2 size={13} /> Enregistré
+                          </span>
+                        )}
+                        {qSave === "error" && (
+                          <span style={{ color: "#dc2626", display: "flex", alignItems: "center", gap: 4 }}>
+                            <AlertCircle size={13} /> Erreur
+                          </span>
+                        )}
+                      </div>
+
+                      <span style={{ fontWeight: 800, color: "#1e3a8a", fontSize: 13 }}>
+                        {q.points} point{q.points > 1 ? "s" : ""}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Énoncé aéré, tabulé et structuré */}
+                  <div
+                    style={{
+                      background: "#f8fafc",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: 12,
+                      padding: "20px 24px",
+                      marginBottom: 22,
+                      userSelect: "none",
+                      WebkitUserSelect: "none",
+                    }}
+                  >
+                    <FormattedPrompt prompt={q.prompt} hidePartHeader={true} />
+                  </div>
+
+                  {/* Zone de saisie selon le type */}
+                  {isTextKind && (
+                    <div>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                        <label
+                          htmlFor={`ans-${q.id}`}
                           style={{
-                            accentColor: "#E06810",
-                            width: 18,
-                            height: 18,
-                            cursor: "pointer",
-                          }}
-                        />
-                        <span
-                          style={{
-                            fontSize: 14,
-                            fontWeight: isChecked ? 700 : 500,
-                            color: isChecked ? "#9a3412" : "#1e293b",
+                            fontSize: 12.5,
+                            fontWeight: 700,
+                            color: "#1e3a8a",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6,
                           }}
                         >
-                          {choice}
+                          <FileText size={14} />
+                          <span>Votre réponse argumentée pour cette question :</span>
+                        </label>
+                        <span style={{ fontSize: 11, color: "#94a3b8" }}>
+                          Sauvegarde automatique à chaque frappe
                         </span>
+                      </div>
+                      <textarea
+                        id={`ans-${q.id}`}
+                        style={{
+                          minHeight: 180,
+                          width: "100%",
+                          padding: "14px 16px",
+                          borderRadius: 10,
+                          border: isAnswered ? "1.5px solid #93c5fd" : "1.5px solid #cbd5e1",
+                          fontSize: 14,
+                          lineHeight: 1.6,
+                          fontFamily: "inherit",
+                          color: "#0f172a",
+                          outline: "none",
+                          boxSizing: "border-box",
+                          background: "#ffffff",
+                          transition: "border-color 0.2s, box-shadow 0.2s",
+                          userSelect: "text",
+                          WebkitUserSelect: "text",
+                        }}
+                        placeholder="Rédigez clairement votre réponse, vos calculs et vos justifications ici..."
+                        value={currentVal}
+                        onChange={(e) => handleAnswerChange(q.id, e.target.value)}
+                        maxLength={q.maxCharacters || undefined}
+                      />
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          marginTop: 6,
+                          fontSize: 11,
+                          color: "#94a3b8",
+                        }}
+                      >
+                        <span>
+                          {isAnswered ? "✓ Réponse mémorisée" : "Question non encore répondue"}
+                        </span>
+                        {q.maxCharacters ? (
+                          <span>
+                            {currentVal.length} / {q.maxCharacters} caractères max
+                          </span>
+                        ) : (
+                          <span>{currentVal.length} caractère{currentVal.length > 1 ? "s" : ""}</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 2. Type Numérique */}
+                  {q.kind === "number" && (
+                    <div>
+                      <label
+                        htmlFor={`ans-${q.id}`}
+                        style={{
+                          display: "block",
+                          fontSize: 12.5,
+                          fontWeight: 700,
+                          color: "#1e3a8a",
+                          marginBottom: 8,
+                        }}
+                      >
+                        Valeur numérique attendue :
                       </label>
-                    );
-                  })}
+                      <input
+                        id={`ans-${q.id}`}
+                        type="number"
+                        style={{
+                          width: "100%",
+                          maxWidth: 320,
+                          height: 44,
+                          padding: "0 14px",
+                          borderRadius: 8,
+                          border: "1.5px solid #cbd5e1",
+                          fontSize: 14,
+                          outline: "none",
+                          userSelect: "text",
+                          WebkitUserSelect: "text",
+                        }}
+                        placeholder="Ex. 15000"
+                        value={currentVal}
+                        onChange={(e) => handleAnswerChange(q.id, e.target.value)}
+                      />
+                    </div>
+                  )}
+
+                  {/* 3. Choix uniques / Choix multiples (QCM) */}
+                  {!isTextKind &&
+                    (q.kind === "single_choice" ||
+                      q.kind === "multiple_choice" ||
+                      q.kind === "true_false") &&
+                    q.choices &&
+                    q.choices.length > 0 && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                        {q.choices.map((choice, cIdx) => {
+                          const isChecked =
+                            q.kind === "single_choice" || q.kind === "true_false"
+                              ? currentVal === choice
+                              : currentVal.split(";;").includes(choice);
+
+                          return (
+                            <label
+                              key={cIdx}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 14,
+                                padding: "14px 18px",
+                                border: isChecked ? "2px solid #1e3a8a" : "1.5px solid #e2e8f0",
+                                borderRadius: 10,
+                                background: isChecked ? "#eff6ff" : "#ffffff",
+                                cursor: "pointer",
+                                transition: "all 0.15s ease",
+                                userSelect: "none",
+                                WebkitUserSelect: "none",
+                              }}
+                            >
+                              <input
+                                type={
+                                  q.kind === "single_choice" || q.kind === "true_false"
+                                    ? "radio"
+                                    : "checkbox"
+                                }
+                                name={`q_${q.id}`}
+                                checked={isChecked}
+                                onChange={() => {
+                                  if (q.kind === "single_choice" || q.kind === "true_false") {
+                                    handleAnswerChange(q.id, choice);
+                                  } else {
+                                    const curList = currentVal.split(";;").filter(Boolean);
+                                    const updated = isChecked
+                                      ? curList.filter((c) => c !== choice)
+                                      : [...curList, choice];
+                                    handleAnswerChange(q.id, updated.join(";;"));
+                                  }
+                                }}
+                                style={{
+                                  accentColor: "#1e3a8a",
+                                  width: 18,
+                                  height: 18,
+                                  cursor: "pointer",
+                                }}
+                              />
+                              <span
+                                style={{
+                                  fontSize: 14,
+                                  fontWeight: isChecked ? 700 : 500,
+                                  color: isChecked ? "#1e3a8a" : "#1e293b",
+                                }}
+                              >
+                                {choice}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    )}
                 </div>
-              )}
+              );
+            })}
           </div>
         ) : (
           <div
@@ -896,84 +1074,105 @@ export function AssessmentClient({
           </div>
         )}
 
-        {/* Barre d'action inférieure : Précédente / Suivante / Soumission */}
+        {/* ── BARRE D'ACTION INFÉRIEURE : NAVIGATION ENTRE ÉPREUVES & SOUMISSION ── */}
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            padding: "16px 0 32px",
+            padding: "24px 0 40px",
+            flexWrap: "wrap",
+            gap: 14,
           }}
         >
           <button
             type="button"
-            onClick={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
-            disabled={currentIndex === 0}
+            onClick={() => {
+              setCurrentEpreuveIndex((prev) => Math.max(0, prev - 1));
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+            disabled={currentEpreuveIndex === 0}
             style={{
-              padding: "10px 18px",
+              padding: "12px 20px",
               borderRadius: 8,
               border: "1.5px solid #cbd5e1",
               background: "#ffffff",
               color: "#334155",
               fontSize: 13,
-              fontWeight: 600,
-              cursor: currentIndex === 0 ? "not-allowed" : "pointer",
-              opacity: currentIndex === 0 ? 0.5 : 1,
+              fontWeight: 700,
+              cursor: currentEpreuveIndex === 0 ? "not-allowed" : "pointer",
+              opacity: currentEpreuveIndex === 0 ? 0.4 : 1,
               display: "flex",
               alignItems: "center",
               gap: 8,
+              boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
             }}
           >
             <ArrowLeft size={16} />
-            <span>Question précédente</span>
+            <span>Épreuve précédente</span>
           </button>
 
-          {currentIndex < questions.length - 1 ? (
-            <button
-              type="button"
-              onClick={() => setCurrentIndex((prev) => Math.min(questions.length - 1, prev + 1))}
-              style={{
-                padding: "10px 22px",
-                borderRadius: 8,
-                border: "none",
-                background: "#26394b",
-                color: "#ffffff",
-                fontSize: 13,
-                fontWeight: 700,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                boxShadow: "0 2px 6px rgba(38, 57, 75, 0.2)",
-              }}
-            >
-              <span>Question suivante</span>
-              <ArrowRight size={16} />
-            </button>
-          ) : (
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            {currentEpreuveIndex < epreuves.length - 1 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setCurrentEpreuveIndex((prev) => Math.min(epreuves.length - 1, prev + 1));
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+                style={{
+                  padding: "12px 24px",
+                  borderRadius: 8,
+                  border: "none",
+                  background: "linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%)",
+                  color: "#ffffff",
+                  fontSize: 13.5,
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  boxShadow: "0 4px 14px rgba(30, 58, 138, 0.35)",
+                }}
+              >
+                <span>Épreuve suivante ({epreuves[currentEpreuveIndex + 1]?.shortCode || ""})</span>
+                <ArrowRight size={16} />
+              </button>
+            )}
+
             <button
               type="button"
               onClick={handleVoluntarySubmit}
               disabled={isPending}
               style={{
-                padding: "11px 24px",
+                padding: "12px 24px",
                 borderRadius: 8,
                 border: "none",
-                background: "linear-gradient(135deg, #E06810 0%, #B44E09 100%)",
+                background: currentEpreuveIndex === epreuves.length - 1
+                  ? "linear-gradient(135deg, #059669 0%, #047857 100%)"
+                  : "linear-gradient(135deg, #334155 0%, #0f172a 100%)",
                 color: "#ffffff",
-                fontSize: 13,
+                fontSize: 13.5,
                 fontWeight: 800,
                 cursor: isPending ? "not-allowed" : "pointer",
                 display: "flex",
                 alignItems: "center",
                 gap: 8,
-                boxShadow: "0 4px 14px rgba(224, 104, 16, 0.4)",
+                boxShadow: currentEpreuveIndex === epreuves.length - 1
+                  ? "0 4px 14px rgba(5, 150, 105, 0.35)"
+                  : "0 4px 14px rgba(15, 23, 42, 0.25)",
               }}
             >
               <Send size={15} />
-              <span>{isPending ? "Transmission en cours..." : "Soumettre définitivement ma copie"}</span>
+              <span>
+                {isPending
+                  ? "Transmission en cours..."
+                  : currentEpreuveIndex === epreuves.length - 1
+                  ? "Soumettre définitivement ma copie"
+                  : "Terminer & Soumettre"}
+              </span>
             </button>
-          )}
+          </div>
         </div>
       </main>
     </div>

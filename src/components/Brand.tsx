@@ -15,8 +15,8 @@ export function Brand({ inverse = false, size = "md" }: { inverse?: boolean; siz
         priority
       />
       <span className="brand-name">
-        MRS <b>&</b> CORLAY
-        <small>RECRUTEMENT & ÉVALUATION</small>
+        MRS HOLDINGS
+        <small>RECRUTEMENT &amp; ÉVALUATION</small>
       </span>
     </Link>
   );

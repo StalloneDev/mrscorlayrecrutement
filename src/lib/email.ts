@@ -50,7 +50,7 @@ export async function sendInvitationEmail({
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
 
-  let senderName = "MRS & CORLAY Recrutement";
+  let senderName = "MRS HOLDINGS";
   if (process.env.SMTP_FROM) {
     const cleaned = process.env.SMTP_FROM.replace(/\\"/g, '"').replace(/^"/, '').replace(/"$/, '');
     const nameMatch = cleaned.match(/^"?([^<"]+)"?\s*</);
@@ -93,100 +93,136 @@ export async function sendInvitationEmail({
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <style>
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; margin: 0; padding: 24px; color: #1e293b; }
-        .wrapper { max-width: 620px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; }
-        .header { background: linear-gradient(135deg, #E06810 0%, #B44E09 100%); padding: 36px 30px; text-align: center; color: #ffffff; }
-        .header h1 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
-        .header p { margin: 6px 0 0; font-size: 13px; opacity: 0.95; letter-spacing: 0.05em; text-transform: uppercase; }
-        .content { padding: 36px 32px; line-height: 1.6; }
-        .greeting { font-size: 16px; font-weight: 700; color: #0f172a; margin-bottom: 12px; }
-        .lead { font-size: 14px; color: #334155; margin-bottom: 20px; }
-        .info-card { background: #fffaf0; border: 1.5px solid #fed7aa; border-radius: 12px; padding: 18px 20px; margin: 24px 0; color: #7c2d12; font-size: 13px; }
-        .info-title { font-weight: 800; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; color: #9a3412; }
+        .wrapper { max-width: 620px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.06); border: 1px solid #cbd5e1; }
+        .header { background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); padding: 32px 28px; text-align: center; color: #ffffff; }
+        .header h1 { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: 0.02em; }
+        .header p { margin: 8px 0 0; font-size: 13px; color: #93c5fd; font-weight: 600; }
+        .content { padding: 36px 32px; line-height: 1.65; color: #334155; font-size: 14px; }
+        .greeting { font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 16px; }
+        .info-card { background: #f8fafc; border-left: 4px solid #1e3a8a; border-radius: 8px; padding: 16px 20px; margin: 24px 0; }
         .btn-wrapper { text-align: center; margin: 32px 0 24px; }
-        .btn { display: inline-block; background: linear-gradient(135deg, #E06810 0%, #B44E09 100%); color: #ffffff !important; text-decoration: none; padding: 15px 36px; border-radius: 10px; font-weight: 800; font-size: 15px; box-shadow: 0 4px 14px rgba(224,104,16,0.35); }
-        .direct-link { font-size: 12px; color: #64748b; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; word-break: break-all; margin-top: 16px; }
+        .btn { display: inline-block; background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%); color: #ffffff !important; text-decoration: none; padding: 15px 36px; border-radius: 10px; font-weight: 800; font-size: 15px; box-shadow: 0 4px 14px rgba(30,58,138,0.35); }
+        .direct-link { font-size: 12px; color: #475569; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; word-break: break-all; margin-top: 16px; }
         .footer { background: #f8fafc; padding: 20px 30px; font-size: 11px; color: #94a3b8; text-align: center; border-top: 1px solid #e2e8f0; }
       </style>
     </head>
     <body>
       <div class="wrapper">
         <div class="header">
-          <img src="${logoSrc}"
-               alt="MRS &amp; CORLAY"
-               width="72" height="72"
-               style="border-radius: 12px; margin-bottom: 14px; display: block; margin-left: auto; margin-right: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.25);" />
-          <h1>MRS &amp; CORLAY HOLDINGS</h1>
-          <p>Direction des Ressources Humaines</p>
+          <h1>INVITATION À L’ÉPREUVE ÉCRITE DE RECRUTEMENT</h1>
+          <p>Poste : ${campaignTitle || "Comptable Analyste Financier"}</p>
         </div>
         
         <div class="content">
-          <div class="greeting">Bonjour ${candidateName},</div>
+          <div class="greeting">Madame, Monsieur ${candidateName},</div>
           
-          <p class="lead">
-            Nous avons le plaisir de vous informer que votre candidature a été retenue pour participer à l'épreuve d'évaluation technique en ligne relative au poste :<br/>
-            <strong style="color: #E06810; font-size: 15px;">« ${campaignTitle} »</strong>.
+          <p>
+            À la suite de l’examen de votre candidature au poste de <strong>${campaignTitle || "Comptable Analyste Financier"}</strong>, nous avons le plaisir de vous informer que votre profil a été présélectionné pour participer à la prochaine étape du processus de recrutement.
           </p>
 
-          <div class="info-card">
-            <div class="info-title">📋 Consignes importantes de composition :</div>
-            <ul style="margin: 6px 0 0; padding-left: 18px; line-height: 1.6;">
-              <li>Installez-vous dans un endroit calme avec une <strong>connexion internet stable</strong>.</li>
-              <li>Le chronomètre se déclenchera dès la confirmation de votre identité.</li>
-              <li>Toute sortie de page ou tentative de triche sera journalisée.</li>
-              <li>Ce lien d'accès personnel restera valide pendant <strong>24 heures</strong>.</li>
-            </ul>
-          </div>
+          <p>
+            À cet effet, nous vous invitons à passer un test écrit en ligne, accessible via notre plateforme de recrutement.
+          </p>
+
+          <p>
+            Cette évaluation permettra d’apprécier vos compétences techniques en comptabilité et en analyse financière, votre capacité de raisonnement, ainsi que votre rigueur et votre sens de l’éthique professionnelle.
+          </p>
+
+          <p>
+            Nous vous invitons à accéder à la plateforme à partir du lien ci-dessous, puis à lire attentivement les consignes avant de commencer l’épreuve.
+          </p>
 
           <div class="btn-wrapper">
             <a href="${invitationUrl}" class="btn">
-              Démarrer mon évaluation technique &rarr;
+              Accéder à la plateforme de recrutement &rarr;
             </a>
+          </div>
+
+          <p>
+            Nous vous remercions de veiller à disposer d’une connexion Internet stable et d’un environnement propice à la concentration. Nous comptons également sur votre intégrité, votre professionnalisme et le strict respect des consignes établies.
+          </p>
+
+          <div class="info-card">
+            <div style="font-weight: 700; color: #0f172a; margin-bottom: 6px;">⏱ Modalités de l'épreuve :</div>
+            <div>&bull; <strong>Durée du test :</strong> 2 heures</div>
+            <div style="margin-top: 4px;">&bull; <strong>Date limite de soumission :</strong> Mardi 27 Octobre 2026 à 12 heures 30 minutes</div>
           </div>
 
           <p style="font-size: 12px; color: #64748b; margin-top: 24px;">
             Si le bouton ci-dessus ne fonctionne pas, copiez et collez l'adresse suivante directement dans la barre d'adresse de votre navigateur :
           </p>
           <div class="direct-link">
-            <a href="${invitationUrl}" style="color: #E06810; text-decoration: underline;">${invitationUrl}</a>
+            <a href="${invitationUrl}" style="color: #1e3a8a; text-decoration: underline; font-weight: 600;">${invitationUrl}</a>
           </div>
 
-          <p style="font-size: 13px; color: #475569; margin-top: 28px;">
-            Nous vous souhaitons pleine réussite dans le passage de cette épreuve.<br/>
-            Bien cordialement,<br/>
-            <strong>Le Comité de Recrutement MRS &amp; CORLAY</strong>
+          <p style="margin-top: 28px;">
+            Nous vous souhaitons une excellente composition et plein succès dans la poursuite de ce processus de sélection.
           </p>
+
+          <p style="margin-top: 20px;">
+            Cordialement,
+          </p>
+
+          <!-- Signature avec logo en bas -->
+          <table style="margin-top: 16px; border-collapse: collapse;" cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="vertical-align: middle;">
+                <img src="${logoSrc}"
+                     alt="MRS HOLDINGS"
+                     width="52" height="52"
+                     style="border-radius: 8px; display: block;" />
+              </td>
+              <td style="vertical-align: middle; padding-left: 14px;">
+                <div style="font-weight: 800; font-size: 14px; color: #0f172a;">L'Équipe Recrutement</div>
+                <div style="font-size: 13px; color: #1e3a8a; font-weight: 700;">MRS HOLDINGS</div>
+              </td>
+            </tr>
+          </table>
         </div>
 
         <div class="footer">
-          MRS &amp; CORLAY Holdings · Système automatisé d'évaluation des compétences · Cet email est envoyé automatiquement, merci de ne pas y répondre directement.
+          MRS HOLDINGS · Système automatisé d'évaluation des compétences · Cet email est envoyé automatiquement, merci de ne pas y répondre directement.
         </div>
       </div>
     </body>
     </html>
   `;
 
-  const text = `Bonjour ${candidateName},
+  const text = `INVITATION À L’ÉPREUVE ÉCRITE DE RECRUTEMENT
+Poste : ${campaignTitle || "Comptable Analyste Financier"}
 
-Votre candidature a été retenue pour participer à l'épreuve d'évaluation technique pour le poste : "${campaignTitle}".
+Objet : Invitation à passer le test écrit en ligne
 
-Accédez directement à votre session d'examen via le lien suivant :
+--------------------------------------------------
+
+Madame, Monsieur ${candidateName},
+
+À la suite de l’examen de votre candidature au poste de ${campaignTitle || "Comptable Analyste Financier"}, nous avons le plaisir de vous informer que votre profil a été présélectionné pour participer à la prochaine étape du processus de recrutement.
+
+À cet effet, nous vous invitons à passer un test écrit en ligne, accessible via notre plateforme de recrutement.
+
+Cette évaluation permettra d’apprécier vos compétences techniques en comptabilité et en analyse financière, votre capacité de raisonnement, ainsi que votre rigueur et votre sens de l’éthique professionnelle.
+
+Nous vous invitons à accéder à la plateforme à partir du lien ci-dessous, puis à lire attentivement les consignes avant de commencer l’épreuve :
 ${invitationUrl}
 
-Consignes :
-- Assurez-vous de disposer d'une connexion internet stable.
-- Le chronomètre se déclenche dès votre confirmation d'identité.
-- Ce lien est personnel et restera accessible pendant 24 heures.
+Nous vous remercions de veiller à disposer d’une connexion Internet stable et d’un environnement propice à la concentration. Nous comptons également sur votre intégrité, votre professionnalisme et le strict respect des consignes établies.
 
-Nous vous souhaitons un excellent passage d'épreuve.
+Durée du test : 2 heures 
+La date limite de soumission de votre test écrit est le Mardi 27 Octobre 2026 à 12 heures 30 minutes.
+
+Nous vous souhaitons une excellente composition et plein succès dans la poursuite de ce processus de sélection.
 
 Cordialement,
-Le Comité de Recrutement MRS & CORLAY`;
+
+L’équipe Recrutement
+MRS HOLDINGS`;
 
   try {
     const info = await transporter.sendMail({
       from: fromSender,
       to,
-      subject: `Convocation à l'épreuve d'évaluation technique — ${campaignTitle}`,
+      subject: `Invitation à passer le test écrit en ligne — ${campaignTitle}`,
       text,
       html,
       attachments,
@@ -281,7 +317,7 @@ export async function sendResultEmail({
         <div class="header">
           <img src="${logoSrc}" alt="MRS &amp; CORLAY" width="72" height="72"
                style="border-radius: 12px; margin-bottom: 14px; display: block; margin-left: auto; margin-right: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.25);" />
-          <h1>MRS &amp; CORLAY HOLDINGS</h1>
+          <h1>MRS HOLDINGS</h1>
           <p>Direction des Ressources Humaines</p>
         </div>
         
@@ -314,12 +350,12 @@ export async function sendResultEmail({
 
           <p style="font-size: 13px; color: #475569; margin-top: 24px;">
             Bien cordialement,<br/>
-            <strong>Le Comité de Recrutement MRS &amp; CORLAY</strong>
+            <strong>L’équipe Recrutement MRS HOLDINGS</strong>
           </p>
         </div>
 
         <div class="footer">
-          MRS &amp; CORLAY Holdings · Système automatisé d'évaluation des compétences · Cet email est envoyé automatiquement, merci de ne pas y répondre directement.
+          MRS HOLDINGS · Système automatisé d'évaluation des compétences · Cet email est envoyé automatiquement, merci de ne pas y répondre directement.
         </div>
       </div>
     </body>
@@ -339,7 +375,7 @@ ${
 }
 
 Cordialement,
-Le Comité de Recrutement MRS & CORLAY`;
+L’équipe Recrutement MRS HOLDINGS`;
 
   try {
     const info = await transporter.sendMail({
@@ -437,7 +473,7 @@ export async function sendApplicationConfirmationEmail({
       <div class="card">
         <div class="header">
           <img src="${logoSrc}" alt="MRS &amp; CORLAY" width="68" height="68" style="border-radius: 12px; margin-bottom: 12px; display: block; margin-left: auto; margin-right: auto;" />
-          <h1>MRS &amp; CORLAY HOLDINGS</h1>
+          <h1>MRS HOLDINGS</h1>
           <p>Direction des Ressources Humaines</p>
         </div>
         
@@ -464,12 +500,12 @@ export async function sendApplicationConfirmationEmail({
           <p style="font-size: 13px; color: #475569; margin-top: 24px;">
             Nous vous remercions vivement de l'intérêt que vous portez à notre Groupe.<br/>
             Bien cordialement,<br/>
-            <strong>Le Département Recrutement MRS &amp; CORLAY</strong>
+            <strong>L’équipe Recrutement MRS HOLDINGS</strong>
           </p>
         </div>
 
         <div class="footer">
-          MRS &amp; CORLAY Holdings · Espace Recrutement &amp; Carrières · Cet email est envoyé automatiquement, merci de ne pas y répondre directement.
+          MRS HOLDINGS · Espace Recrutement &amp; Carrières · Cet email est envoyé automatiquement, merci de ne pas y répondre directement.
         </div>
       </div>
     </body>
@@ -483,10 +519,10 @@ Nous accusons bonne réception de votre dossier de candidature pour le poste : "
 Votre Curriculum Vitae et vos éléments transmis ont bien été enregistrés dans notre système.
 Notre équipe RH examinera votre profil avec attention. Si votre profil correspond aux attentes, vous serez contacté(e) pour les prochaines étapes.
 
-Nous vous remercions de l'intérêt que vous portez à MRS & CORLAY.
+Nous vous remercions de l'intérêt que vous portez à MRS HOLDINGS.
 
 Bien cordialement,
-Le Département Recrutement MRS & CORLAY`;
+L’équipe Recrutement MRS HOLDINGS`;
 
   try {
     const info = await transporter.sendMail({

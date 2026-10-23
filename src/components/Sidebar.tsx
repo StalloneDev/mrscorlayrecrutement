@@ -38,10 +38,10 @@ export function Sidebar() {
 
       <div style={{ margin: "16px 14px", padding: "10px 12px", borderRadius: 8, background: "rgba(255,255,255,0.06)", display: "flex", alignItems: "center", gap: 10 }}>
         <div style={{ width: 28, height: 28, borderRadius: 6, background: "#f4a261", color: "#6b2d0e", display: "grid", placeItems: "center", fontWeight: "bold", fontSize: 11 }}>
-          MC
+          MH
         </div>
         <div>
-          <div style={{ fontSize: 11, fontWeight: "bold", color: "#f0f3f1" }}>MRS &amp; CORLAY</div>
+          <div style={{ fontSize: 11, fontWeight: "bold", color: "#f0f3f1" }}>MRS HOLDINGS</div>
           <small style={{ fontSize: 10, color: "#a7b6bc" }}>Espace RH Partagé</small>
         </div>
       </div>
